@@ -1,0 +1,132 @@
+{% extends 'layout.twig' %}
+{% block title %}Create auction listing — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 48rem;">
+
+    <h1 class="h3 mb-2">Create Auction Listing</h1>
+    <p class="text-muted-aa mb-4">List your item and start receiving bids from eager buyers. Fill in the details below to get started.</p>
+
+    <div class="alert alert-info small mb-4">
+        <i class="bi bi-info-circle me-1"></i>
+        This form is <strong>visual only</strong> right now — actual insert into <code>auction_items</code>
+        + <code>item_images</code> + Cloudinary upload is the next piece of backend work.
+    </div>
+
+    <form action="#" method="post" class="d-flex flex-column gap-4" onsubmit="event.preventDefault(); alert('Listing creation will be wired up in the next deliverable.');">
+
+        <section>
+            <h5>Photos</h5>
+            <p class="small text-muted-aa">Add up to 5 photos. The first image is the main listing photo.</p>
+            <div class="d-flex flex-wrap gap-3">
+                <button type="button"
+                        class="border border-2 border-dashed rounded-lg-aa d-flex flex-column align-items-center justify-content-center text-muted-aa"
+                        style="width: 96px; height: 96px; background: transparent;">
+                    <i class="bi bi-upload fs-5"></i>
+                    <span style="font-size: 0.65rem;" class="mt-1">Add photo</span>
+                </button>
+            </div>
+            <p class="small text-muted-aa mt-2"><i class="bi bi-image me-1"></i>Images auto-resize via Cloudinary for optimal lazy loading.</p>
+        </section>
+
+        <section class="d-flex flex-column gap-3">
+            <h5 class="mb-0">Item Details</h5>
+            <div>
+                <label class="form-label small text-muted-aa">Title <span class="text-danger">*</span></label>
+                <input name="title" class="form-control" placeholder="e.g., Vintage Rolex Submariner 1968" required>
+            </div>
+            <div>
+                <label class="form-label small text-muted-aa">Description <span class="text-danger">*</span></label>
+                <textarea name="description" rows="4" class="form-control" placeholder="Describe your item in detail…" required></textarea>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small text-muted-aa">Category <span class="text-danger">*</span></label>
+                    <select name="category_id" class="form-select" required>
+                        <option value="">Select category</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.category_id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small text-muted-aa">Condition</label>
+                    <select name="condition" class="form-select">
+                        <option value="">Select condition</option>
+                        <option>New</option>
+                        <option>Like New</option>
+                        <option>Excellent</option>
+                        <option>Good</option>
+                        <option>Fair</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="d-flex flex-column gap-3">
+            <h5 class="mb-0"><i class="bi bi-currency-dollar"></i> Pricing</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted-aa">Starting price <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0" name="starting_price" class="form-control" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted-aa">Reserve price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0" name="reserve_price" class="form-control" placeholder="Optional">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted-aa">Buy Now price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0" name="buy_now_price" class="form-control" placeholder="Optional">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="d-flex flex-column gap-3">
+            <h5 class="mb-0"><i class="bi bi-clock"></i> Duration &amp; Shipping</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small text-muted-aa">Auction duration</label>
+                    <select name="duration" class="form-select">
+                        <option value="1">1 day</option>
+                        <option value="3">3 days</option>
+                        <option value="5">5 days</option>
+                        <option value="7" selected>7 days</option>
+                        <option value="10">10 days</option>
+                        <option value="14">14 days</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small text-muted-aa">Shipping</label>
+                    <select name="shipping" class="form-select">
+                        <option value="free">Free shipping</option>
+                        <option value="standard">Standard ($10)</option>
+                        <option value="express">Express ($25)</option>
+                        <option value="pickup">Local pickup only</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="p-3 bg-surface-aa rounded-lg-aa border">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="smsOpt" checked>
+                <label class="form-check-label" for="smsOpt">
+                    Enable SMS bid notifications (Twilio)
+                    <div class="small text-muted-aa">Receive text messages when someone bids. Buyers can counter-bid via SMS reply.</div>
+                </label>
+            </div>
+        </section>
+
+        <button type="submit" class="btn btn-primary py-2">Create Auction Listing</button>
+    </form>
+</div>
+{% endblock %}

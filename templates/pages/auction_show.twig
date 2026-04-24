@@ -1,0 +1,190 @@
+{% extends 'layout.twig' %}
+
+{% block title %}{{ auction.title }} — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <nav aria-label="breadcrumb" class="small text-muted-aa">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/browse" class="text-decoration-none text-muted-aa">Browse</a></li>
+            <li class="breadcrumb-item">
+                <a href="/browse?category={{ auction.category_id }}" class="text-decoration-none text-muted-aa">
+                    {{ auction.category_name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active text-truncate" aria-current="page">{{ auction.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+
+        <div class="col-lg-7">
+            <div class="aa-card-img rounded-xl">
+                {% if auction.primary_image %}
+                    <img src="{{ auction.primary_image }}" alt="{{ auction.title }}">
+                {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted-aa">
+                        <i class="bi bi-image fs-1"></i>
+                    </div>
+                {% endif %}
+                {% if auction.featured %}
+                    <span class="aa-badge aa-badge-featured">Featured</span>
+                {% endif %}
+                {% if auction.status != 'active' %}
+                    <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                         style="background: rgba(0,0,0,0.55); color: #fff; font-size: 1.5rem; text-transform: uppercase;">
+                        {{ auction.status }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-5 d-flex flex-column gap-3">
+            <div>
+                <h1 class="h3 mb-2">{{ auction.title }}</h1>
+                <div class="d-flex flex-wrap gap-3 small text-muted-aa">
+                    <span>{{ auction.total_bids }} bid{{ auction.total_bids == 1 ? '' : 's' }}</span>
+                    <span>•</span>
+                    <span>{{ auction.condition }}</span>
+                    {% if auction.seller_is_verified %}
+                        <span>•</span>
+                        <span><i class="bi bi-patch-check-fill text-primary me-1"></i>Verified seller</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="aa-bid-box">
+                <div class="d-flex align-items-end justify-content-between">
+                    <div>
+                        <div class="small text-muted-aa">Current Bid</div>
+                        <div class="display-6 text-emerald mb-0">${{ auction.current_price|number_format(2) }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small text-muted-aa">Starting Price</div>
+                        <div>${{ auction.starting_price|number_format(2) }}</div>
+                    </div>
+                </div>
+
+                {% if auction.reserve_price and auction.current_price < auction.reserve_price %}
+                    <div class="mt-2 small"><span class="badge bg-warning-subtle text-warning-emphasis">Reserve price not yet met</span></div>
+                {% endif %}
+
+                <div class="mt-3 small">
+                    <i class="bi bi-clock me-1 text-danger"></i>
+                    Ends in <strong>{{ auction.end_time|aa_timeleft }}</strong>
+                    <span class="text-muted-aa">({{ auction.end_time }})</span>
+                </div>
+            </div>
+
+            {% if current_user %}
+                {% if auction.status == 'active' and auction.end_time|aa_timeleft != 'Ended' %}
+                    <form action="/auction/{{ auction.item_id }}/bid" method="post" class="d-flex gap-2">
+                        <input type="hidden" name="_csrf" value="{{ csrf }}">
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" min="{{ min_bid }}" name="amount"
+                                   class="form-control" placeholder="{{ min_bid|number_format(2) }} or more" required>
+                        </div>
+                        <button type="submit" class="btn btn-emerald flex-shrink-0 px-4">Place Bid</button>
+                    </form>
+                    <div class="small text-muted-aa">Minimum next bid: ${{ min_bid|number_format(2) }}</div>
+                {% else %}
+                    <div class="alert alert-secondary mb-0">This auction has ended.</div>
+                {% endif %}
+            {% else %}
+                <a href="/login" class="btn btn-primary w-100">Log in to place a bid</a>
+            {% endif %}
+
+            {% if auction.buy_now_price %}
+                <button type="button" class="btn btn-amber" disabled title="Buy Now is coming in a later deliverable">
+                    <i class="bi bi-cart me-2"></i>Buy Now — ${{ auction.buy_now_price|number_format(2) }}
+                </button>
+            {% endif %}
+
+            <div class="row row-cols-2 g-2 small">
+                <div class="col"><div class="aa-trust-pill"><i class="bi bi-shield-check text-emerald"></i> Stripe secure payment</div></div>
+                <div class="col"><div class="aa-trust-pill"><i class="bi bi-truck"></i> {{ auction.shipping }}</div></div>
+                <div class="col"><div class="aa-trust-pill"><i class="bi bi-exclamation-triangle text-amber"></i> Snipe protection</div></div>
+                <div class="col"><div class="aa-trust-pill"><i class="bi bi-chat-dots"></i> SMS bid alerts</div></div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <h3 class="h5">About this item</h3>
+            <p class="text-muted-aa" style="white-space: pre-line;">{{ auction.description }}</p>
+
+            <div class="row row-cols-2 g-2 small mt-2">
+                <div class="col">
+                    <div class="p-3 bg-surface-aa rounded-lg-aa">
+                        <div class="text-muted-aa small">Condition</div>
+                        <div>{{ auction.condition }}</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 bg-surface-aa rounded-lg-aa">
+                        <div class="text-muted-aa small">Category</div>
+                        <div>{{ auction.category_name }}</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 bg-surface-aa rounded-lg-aa">
+                        <div class="text-muted-aa small">Shipping</div>
+                        <div>{{ auction.shipping }}</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 bg-surface-aa rounded-lg-aa">
+                        <div class="text-muted-aa small">Listed</div>
+                        <div>{{ auction.created_at|date('M j, Y') }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <h3 class="h5">Seller</h3>
+            <div class="d-flex align-items-center gap-3 p-3 bg-surface-aa rounded-lg-aa">
+                {% if auction.seller_profile_picture %}
+                    <img src="{{ auction.seller_profile_picture }}" class="rounded-circle" width="48" height="48" alt="">
+                {% else %}
+                    <span class="aa-brand-badge" style="width: 48px; height: 48px;"><i class="bi bi-person fs-5"></i></span>
+                {% endif %}
+                <div>
+                    <div>{{ auction.seller_first_name }} {{ auction.seller_last_name }}</div>
+                    <div class="small text-muted-aa">@{{ auction.seller_username }} — member since {{ auction.seller_created_at|date('M Y') }}</div>
+                </div>
+            </div>
+
+            <h3 class="h5 mt-4">Recent bids</h3>
+            {% if bids|length == 0 %}
+                <p class="text-muted-aa small">No bids yet. Be the first!</p>
+            {% else %}
+                <ul class="list-unstyled d-flex flex-column gap-2">
+                    {% for bid in bids %}
+                        <li class="d-flex align-items-center justify-content-between p-2 rounded-lg-aa
+                                   {{ loop.first ? 'border border-success-subtle bg-success-subtle' : 'bg-surface-aa' }}">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if bid.profile_picture %}
+                                    <img src="{{ bid.profile_picture }}" class="rounded-circle" width="28" height="28" alt="">
+                                {% else %}
+                                    <span class="aa-brand-badge" style="width: 28px; height: 28px;"><i class="bi bi-person"></i></span>
+                                {% endif %}
+                                <div>
+                                    <div class="small">{{ bid.username }} {% if loop.first %}<span class="text-success small">Highest</span>{% endif %}</div>
+                                    <div class="text-muted-aa" style="font-size: 0.7rem;">{{ bid.bid_time|date('M j, g:i a') }}</div>
+                                </div>
+                            </div>
+                            <div class="{{ loop.first ? 'text-success' : '' }}">${{ bid.bid_amount|number_format(2) }}</div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

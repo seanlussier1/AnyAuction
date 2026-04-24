@@ -1,0 +1,80 @@
+{% extends 'layout.twig' %}
+
+{% block content %}
+
+<section class="aa-hero">
+    <div class="container position-relative">
+        <div style="max-width: 40rem;">
+            <h1 class="mb-3">Auction <span class="amber">Anything.</span><br>Win Everything.</h1>
+            <p class="lead text-white-50 mb-4" style="max-width: 32rem;">
+                The marketplace where buyers find amazing deals and sellers reach eager bidders.
+                Start bidding or list your items today.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/browse" class="btn btn-amber px-4 py-2">
+                    Start Browsing <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+                <a href="/sell" class="btn btn-outline-light px-4 py-2">Sell an Item</a>
+            </div>
+
+            <div class="aa-hero-stats row g-4 mt-4" style="max-width: 24rem;">
+                {% for stat in stats %}
+                    <div class="col-4">
+                        <p>{{ stat.value }}</p>
+                        <p>{{ stat.label }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container py-5">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="h4 mb-0">Browse Categories</h2>
+        <a href="/browse" class="small text-decoration-none">View All <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="row row-cols-2 row-cols-sm-4 row-cols-lg-8 g-3">
+        {% for cat in categories %}
+            <div class="col">
+                <a href="/browse?category={{ cat.category_id }}" class="aa-category">
+                    <i class="bi bi-{{ cat.icon }}"></i>
+                    <span class="small">{{ cat.name }}</span>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+{% if featured|length > 0 %}
+<section class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="h4 mb-0">Featured Auctions</h2>
+        <a href="/browse" class="small text-decoration-none">See All <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+        {% for auction in featured %}
+            <div class="col">
+                {% include 'partials/auction_card.twig' with { auction: auction } only %}
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if ending_soon|length > 0 %}
+<section class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="h4 mb-0"><i class="bi bi-clock text-danger me-2"></i>Ending Soon</h2>
+    </div>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
+        {% for auction in ending_soon %}
+            <div class="col">
+                {% include 'partials/auction_card.twig' with { auction: auction } only %}
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,46 @@
+{# Expects `auction` in scope. Fields used: item_id, title, current_price,
+   buy_now_price, reserve_price, end_time, featured, primary_image, total_bids #}
+{% set time_left = auction.end_time|aa_timeleft %}
+<div class="aa-card">
+    <a href="/auction/{{ auction.item_id }}" class="aa-card-img d-block text-decoration-none">
+        {% if auction.primary_image %}
+            <img src="{{ auction.primary_image }}" alt="{{ auction.title }}" loading="lazy">
+        {% else %}
+            <div class="d-flex align-items-center justify-content-center h-100 text-muted-aa">
+                <i class="bi bi-image fs-1"></i>
+            </div>
+        {% endif %}
+
+        {% if auction.featured %}
+            <span class="aa-badge aa-badge-featured">Featured</span>
+        {% endif %}
+        {% if auction.buy_now_price %}
+            <span class="aa-badge aa-badge-buynow">Buy Now ${{ auction.buy_now_price|number_format(0) }}</span>
+        {% endif %}
+
+        <button type="button" class="aa-heart" aria-label="Add to watchlist" onclick="event.preventDefault();">
+            <i class="bi bi-heart"></i>
+        </button>
+    </a>
+
+    <div class="aa-card-body d-flex flex-column gap-2 flex-grow-1">
+        <a href="/auction/{{ auction.item_id }}" class="text-decoration-none text-dark">
+            <h3 class="h6 line-clamp-2 mb-0">{{ auction.title }}</h3>
+        </a>
+
+        <div class="d-flex align-items-end justify-content-between">
+            <div>
+                <div class="small text-muted-aa">Current Bid</div>
+                <div class="fs-5 text-emerald">${{ auction.current_price|number_format(2) }}</div>
+            </div>
+            <div class="text-end small text-muted-aa">
+                <div>{{ auction.total_bids }} bid{{ auction.total_bids == 1 ? '' : 's' }}</div>
+                <div><i class="bi bi-clock me-1"></i>{{ time_left }}</div>
+            </div>
+        </div>
+
+        {% if auction.reserve_price and auction.current_price < auction.reserve_price %}
+            <span class="badge bg-warning-subtle text-warning-emphasis align-self-start">Reserve not met</span>
+        {% endif %}
+    </div>
+</div>

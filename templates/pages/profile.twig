@@ -1,0 +1,212 @@
+{% extends 'layout.twig' %}
+{% block title %}{{ user.first_name }} {{ user.last_name }} — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="p-4 p-md-5 rounded-xl text-white mb-4"
+         style="background: linear-gradient(135deg, #030213 0%, #1a1a2e 60%, #242443 100%);">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture }}" class="rounded-circle" width="64" height="64" alt="">
+                {% else %}
+                    <span class="aa-brand-badge" style="width: 64px; height: 64px;">
+                        <i class="bi bi-person fs-3"></i>
+                    </span>
+                {% endif %}
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h1 class="h3 text-white mb-0">{{ user.first_name }} {{ user.last_name }}</h1>
+                        {% if user.is_verified %}
+                            <i class="bi bi-patch-check-fill" style="color:#3b82f6;"></i>
+                        {% endif %}
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle text-capitalize">{{ user.role }}</span>
+                    </div>
+                    <div class="small text-white-50">@{{ user.username }} · {{ user.email }}</div>
+                    <div class="small text-white-50 opacity-75">Member since {{ user.created_at|date('F Y') }}</div>
+                </div>
+            </div>
+            <a href="/sell" class="btn btn-outline-light btn-sm align-self-start">
+                <i class="bi bi-plus-lg me-1"></i>Create new listing
+            </a>
+        </div>
+
+        <div class="row row-cols-3 row-cols-md-6 g-3 mt-3">
+            <div class="col">
+                <div class="fs-5 text-amber">{{ stats.active_listings }}</div>
+                <div class="small text-white-50">Active listings</div>
+            </div>
+            <div class="col">
+                <div class="fs-5 text-amber">{{ stats.total_listings }}</div>
+                <div class="small text-white-50">Total listings</div>
+            </div>
+            <div class="col">
+                <div class="fs-5 text-amber">{{ stats.active_bids }}</div>
+                <div class="small text-white-50">Active bids</div>
+            </div>
+            <div class="col">
+                <div class="fs-5 text-amber">{{ stats.watchlist }}</div>
+                <div class="small text-white-50">Watching</div>
+            </div>
+            <div class="col">
+                <div class="fs-5 text-amber">{{ stats.rating }}</div>
+                <div class="small text-white-50"><i class="bi bi-star-fill"></i> Rating</div>
+            </div>
+            <div class="col">
+                <div class="fs-5 text-amber">{{ stats.reviews }}</div>
+                <div class="small text-white-50">Reviews</div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4 flex-nowrap overflow-auto" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-listings"      type="button"><i class="bi bi-shop me-1"></i>My listings</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-bids"          type="button"><i class="bi bi-cart me-1"></i>My bids</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-watchlist"     type="button"><i class="bi bi-heart me-1"></i>Watchlist</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-orders"        type="button"><i class="bi bi-box me-1"></i>Orders</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-reviews"       type="button"><i class="bi bi-chat-dots me-1"></i>Reviews</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-notifications" type="button"><i class="bi bi-bell me-1"></i>Notifications</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-settings"      type="button"><i class="bi bi-gear me-1"></i>Settings</button></li>
+    </ul>
+
+    <div class="tab-content">
+
+        <div class="tab-pane fade show active" id="tab-listings" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 mb-0">My listings</h2>
+                    <div class="small text-muted-aa">{{ listings|length }} total</div>
+                </div>
+                <a href="/sell" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New listing</a>
+            </div>
+            {% if listings|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-shop fs-1 opacity-25 d-block mb-2"></i>
+                    <p>You haven't created any listings yet.</p>
+                    <a href="/sell" class="text-decoration-none">Create your first listing</a>
+                </div>
+            {% else %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                    {% for auction in listings %}
+                        <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="tab-bids" role="tabpanel">
+            {% if bids|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-cart fs-1 opacity-25 d-block mb-2"></i>
+                    <p>You haven't placed any bids yet.</p>
+                    <a href="/browse" class="text-decoration-none">Browse auctions</a>
+                </div>
+            {% else %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                    {% for auction in bids %}
+                        <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="tab-watchlist" role="tabpanel">
+            <div class="text-center py-5 text-muted-aa">
+                <i class="bi bi-heart fs-1 opacity-25 d-block mb-2"></i>
+                <p>Your watchlist will appear here once the <code>watchlists</code> table is wired up.</p>
+                <a href="/watchlist" class="text-decoration-none">Preview watchlist page</a>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-orders" role="tabpanel">
+            <div class="text-center py-5 text-muted-aa">
+                <i class="bi bi-box fs-1 opacity-25 d-block mb-2"></i>
+                <p>Order history lives behind Stripe checkout — coming in a later deliverable.</p>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-reviews" role="tabpanel">
+            <div class="p-4 bg-warning-subtle rounded-lg-aa border border-warning-subtle mb-3 d-flex align-items-center gap-3">
+                <div class="text-center" style="width: 100px;">
+                    <div class="fs-3 text-warning-emphasis mb-1">{{ stats.rating }}</div>
+                    <div class="text-warning">
+                        {% for i in 1..5 %}<i class="bi bi-star{{ i <= 4 ? '-fill' : '' }}"></i>{% endfor %}
+                    </div>
+                    <div class="small text-muted-aa">{{ stats.reviews }} reviews</div>
+                </div>
+                <div class="flex-grow-1 small">
+                    {% for s in [5, 4, 3, 2, 1] %}
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span style="width: 0.75rem;">{{ s }}</span>
+                            <i class="bi bi-star-fill text-warning" style="font-size: 0.7rem;"></i>
+                            <div class="progress flex-grow-1" style="height: 6px;">
+                                <div class="progress-bar bg-warning" style="width: 0%;"></div>
+                            </div>
+                            <span class="text-muted-aa" style="width: 1rem;">0</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <p class="text-center text-muted-aa py-3">No reviews yet.</p>
+        </div>
+
+        <div class="tab-pane fade" id="tab-notifications" role="tabpanel">
+            <div class="text-center py-5 text-muted-aa">
+                <i class="bi bi-bell fs-1 opacity-25 d-block mb-2"></i>
+                <p>Notifications (outbid, won, snipe protection, order updates) come online alongside the Twilio + email stack.</p>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-settings" role="tabpanel">
+            <div style="max-width: 32rem;">
+                <h3 class="h6">Profile information</h3>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted-aa">First name</label>
+                        <input class="form-control" value="{{ user.first_name }}" disabled>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted-aa">Last name</label>
+                        <input class="form-control" value="{{ user.last_name }}" disabled>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-muted-aa">Email</label>
+                        <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                    </div>
+                </div>
+
+                <h3 class="h6">Payout settings</h3>
+                <div class="p-3 mb-4 rounded-lg-aa border border-success-subtle bg-success-subtle small">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi bi-credit-card text-success"></i>
+                        <span>Stripe Connected</span>
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">Active</span>
+                    </div>
+                    <div class="text-muted-aa">Payouts sent to your linked bank account every Friday. (Coming with Stripe integration.)</div>
+                </div>
+
+                <h3 class="h6">Notification preferences</h3>
+                <div class="d-flex flex-column gap-2 mb-4">
+                    {% for pref in [
+                        'Email notifications for new bids on my listings',
+                        'SMS notifications via Twilio (phone)',
+                        'Outbid alerts for items I am bidding on',
+                        'Weekly seller performance digest',
+                        'Order update notifications'
+                    ] %}
+                        <label class="p-2 border rounded-lg-aa d-flex align-items-center gap-2 small">
+                            <input type="checkbox" class="form-check-input" checked disabled>
+                            {{ pref }}
+                        </label>
+                    {% endfor %}
+                </div>
+
+                <button class="btn btn-primary" disabled>Save settings</button>
+                <p class="small text-muted-aa mt-2">Settings save is wired in a later phase.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

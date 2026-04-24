@@ -1,0 +1,50 @@
+{% extends 'layout.twig' %}
+{% block title %}Create an account — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 30rem;">
+    <a href="/" class="d-flex align-items-center gap-2 text-decoration-none text-dark mb-4">
+        <span class="aa-brand-badge"><i class="bi bi-hammer"></i></span>
+        <span class="fs-5">AnyAuction</span>
+    </a>
+
+    <h1 class="h3 mb-1">Create your account</h1>
+    <p class="text-muted-aa mb-4">Start bidding and selling in minutes.</p>
+
+    <form method="post" action="/register" class="d-flex flex-column gap-3">
+        <div class="row g-3">
+            <div class="col">
+                <label class="form-label small text-muted-aa">First name</label>
+                <input name="first_name" class="form-control" required value="{{ old.firstName|default('') }}">
+            </div>
+            <div class="col">
+                <label class="form-label small text-muted-aa">Last name</label>
+                <input name="last_name" class="form-control" required value="{{ old.lastName|default('') }}">
+            </div>
+        </div>
+        <div>
+            <label class="form-label small text-muted-aa">Email</label>
+            <input type="email" name="email" class="form-control" required value="{{ old.email|default('') }}">
+        </div>
+        <div>
+            <label class="form-label small text-muted-aa">Username</label>
+            <input name="username" class="form-control" required minlength="3" maxlength="50" value="{{ old.username|default('') }}">
+        </div>
+        <div>
+            <label class="form-label small text-muted-aa">Password</label>
+            <input type="password" name="password" class="form-control" required minlength="8">
+            <div class="form-text">At least 8 characters.</div>
+        </div>
+        <div>
+            <label class="form-label small text-muted-aa">Confirm password</label>
+            <input type="password" name="password_confirm" class="form-control" required minlength="8">
+        </div>
+
+        <button type="submit" class="btn btn-primary py-2">Create account <i class="bi bi-arrow-right ms-1"></i></button>
+    </form>
+
+    <p class="text-center small text-muted-aa mt-4">
+        Already have an account? <a href="/login" class="text-decoration-none">Sign in</a>
+    </p>
+</div>
+{% endblock %}

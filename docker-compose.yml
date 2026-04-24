@@ -1,0 +1,46 @@
+# Dev-only stack. Run with: docker compose up -d
+# Lets anyone on the team boot the app without installing PHP or MariaDB locally.
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_DATABASE: anyauction
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  php:
+    image: php:8.2-cli
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: anyauction
+      DB_USER: root
+      DB_PASS: rootpass
+      APP_ENV: dev
+      DISPLAY_ERROR_DETAILS: "true"
+      COMPOSER_ALLOW_SUPERUSER: "1"
+    ports:
+      - "8000:8000"
+    command: >
+      bash -lc "set -e
+      && apt-get update -qq
+      && apt-get install -y --no-install-recommends git unzip >/dev/null
+      && docker-php-ext-install -j$$(nproc) pdo pdo_mysql
+      && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+      && composer install --no-interaction --prefer-dist
+      && php -S 0.0.0.0:8000 -t public"

@@ -1,0 +1,35 @@
+{% extends 'layout.twig' %}
+{% block title %}My watchlist — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-heart-fill text-danger fs-4"></i>
+        <h1 class="h3 mb-0">My Watchlist</h1>
+        <span class="text-muted-aa">({{ auctions|length }})</span>
+    </div>
+
+    <div class="alert alert-info small mb-4">
+        <i class="bi bi-info-circle me-1"></i>
+        Watchlist persistence (the <code>watchlists</code> table + toggle endpoint) is a later-deliverable feature.
+        The list below is a stand-in so the page has content.
+    </div>
+
+    {% if auctions|length == 0 %}
+        <div class="text-center py-5">
+            <i class="bi bi-heart fs-1 text-muted-aa opacity-25 d-block mb-3"></i>
+            <h3 class="h5 text-muted-aa">Your watchlist is empty</h3>
+            <p class="small text-muted-aa">Browse auctions and click the heart icon to save items here.</p>
+            <a href="/browse" class="btn btn-primary mt-2">Browse auctions</a>
+        </div>
+    {% else %}
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+            {% for auction in auctions %}
+                <div class="col">
+                    {% include 'partials/auction_card.twig' with { auction: auction } only %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

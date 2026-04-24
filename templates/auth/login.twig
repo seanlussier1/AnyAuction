@@ -1,0 +1,62 @@
+{% extends 'layout.twig' %}
+{% block title %}Sign in — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="aa-auth-shell">
+    <div class="aa-auth-form">
+        <div style="width: 100%; max-width: 26rem;">
+            <a href="/" class="d-flex align-items-center gap-2 text-decoration-none text-dark mb-4">
+                <span class="aa-brand-badge"><i class="bi bi-hammer"></i></span>
+                <span class="fs-5">AnyAuction</span>
+            </a>
+
+            <h1 class="h3 mb-1">Welcome back</h1>
+            <p class="text-muted-aa mb-4">Sign in to continue bidding and selling.</p>
+
+            <form method="post" action="/login" class="d-flex flex-column gap-3">
+                <div>
+                    <label class="form-label small text-muted-aa">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" class="form-control" placeholder="you@example.com"
+                               value="{{ old.email|default('') }}" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label small text-muted-aa d-flex justify-content-between">
+                        <span>Password</span>
+                        <a href="#" class="text-decoration-none small">Forgot password?</a>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+                    </div>
+                </div>
+
+                <label class="d-flex align-items-center gap-2 small text-muted-aa">
+                    <input type="checkbox" name="remember" checked>
+                    Remember me for 30 days
+                </label>
+
+                <button type="submit" class="btn btn-primary py-2">Sign In <i class="bi bi-arrow-right ms-1"></i></button>
+            </form>
+
+            <p class="text-center small text-muted-aa mt-4">
+                Don't have an account? <a href="/register" class="text-decoration-none">Create one</a>
+            </p>
+        </div>
+    </div>
+
+    <div class="aa-auth-visual">
+        <img src="https://images.unsplash.com/photo-1623503664054-945220c7294c?w=1200&q=80" alt="">
+        <div class="caption">
+            <div class="d-flex gap-2 mb-3">
+                <span class="badge bg-warning text-dark">Live Now</span>
+                <span class="badge bg-light bg-opacity-25 text-white">12,000+ Auctions</span>
+            </div>
+            <h2 class="h3 mb-2">Find your next<br>treasure today.</h2>
+            <p class="small mb-0 text-white-50">Join thousands of buyers and sellers in the most exciting auction marketplace.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
