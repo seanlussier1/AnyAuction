@@ -188,7 +188,7 @@ final class Auction
         $stmt->execute(['amount' => $amount, 'id' => $itemId]);
     }
 
-    /**
+     /**
      * Shared SELECT for card-listing queries (home + ending-soon).
      */
     private function listingSelect(): string
@@ -201,5 +201,41 @@ final class Auction
                           LIMIT 1) AS primary_image,
                        (SELECT COUNT(*) FROM bids WHERE item_id = a.item_id) AS total_bids
                 FROM auction_items a';
+    }
+
+    public function create(int $sellerId, array $data): int
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $stmt = $this->db->prepare('
+                INSERT INTO auction_items (
+                    seller_id, category_id, title, description, starting_price, current_price,
+                    reserve_price, buy_now_price, start_time, end_time, status, `condition`, shipping
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), \'active\', ?, ?)
+            ');
+
+            $stmt->execute([
+                $sellerId,
+                $data['category_id'],
+                trim($data['title']),
+                trim($data['description']),
+                $data['starting_price'],
+                $data['starting_price'], // current_price starts as starting_price
+                $data['reserve_price'] ?? null,
+                $data['buy_now_price'] ?? null,
+                $data['duration'],
+                $data['condition'] ?? null,
+                $data['shipping'] ?? null,
+            ]);
+
+            $auctionId = (int)$this->db->lastInsertId();
+
+            $this->db->commit();
+            return $auctionId;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            throw new \RuntimeException('Failed to create auction: ' . $e->getMessage());
+        }
     }
 }

@@ -20,6 +20,7 @@ return function (App $app): void {
 
     $app->get('/browse',    [BrowseController::class, 'index']);
     $app->get('/sell',      [SellController::class, 'showForm']);
+    $app->post('/sell',     [SellController::class, 'create']);
     $app->get('/watchlist', [WatchlistController::class, 'index']);
     $app->get('/profile',   [ProfileController::class, 'index']);
     $app->get('/admin',     [AdminController::class, 'index']);
