@@ -8,6 +8,7 @@ use App\Controllers\AuthController;
 use App\Controllers\BrowseController;
 use App\Controllers\HomeController;
 use App\Controllers\ProfileController;
+use App\Controllers\SearchController;
 use App\Controllers\SellController;
 use App\Controllers\WatchlistController;
 use Slim\App;
@@ -16,9 +17,11 @@ return function (App $app): void {
     $app->get('/', [HomeController::class, 'index']);
 
     $app->get('/auction/{id}', [AuctionController::class, 'show']);
-    $app->post('/auction/{id}/bid', [AuctionController::class, 'placeBid']);
+    $app->post('/auction/{id}/bid',     [AuctionController::class, 'placeBid']);
+    $app->post('/auction/{id}/buy-now', [AuctionController::class, 'buyNow']);
 
-    $app->get('/browse',    [BrowseController::class, 'index']);
+    $app->get('/browse',     [BrowseController::class, 'index']);
+    $app->get('/api/search', [SearchController::class, 'suggest']);
     $app->get('/sell',      [SellController::class, 'showForm']);
     $app->post('/sell',     [SellController::class, 'create']);
     $app->get('/watchlist', [WatchlistController::class, 'index']);

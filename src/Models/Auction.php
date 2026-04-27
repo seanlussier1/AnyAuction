@@ -8,6 +8,16 @@ use PDO;
 
 final class Auction
 {
+    /**
+     * Predicate excluding bought-out auctions: a buyout was set, the current
+     * price has reached or passed it, and at least one bid exists. Without
+     * the bid check, listings created with starting_price == buy_now_price
+     * (and no bids yet) would be falsely flagged as sold.
+     */
+    private const NOT_SOLD = '(a.buy_now_price IS NULL
+        OR a.current_price < a.buy_now_price
+        OR NOT EXISTS (SELECT 1 FROM bids b_ns WHERE b_ns.item_id = a.item_id))';
+
     public function __construct(private readonly PDO $db)
     {
     }
@@ -21,6 +31,7 @@ final class Auction
     {
         $stmt = $this->db->prepare($this->listingSelect() . '
             WHERE a.status = \'active\' AND a.featured = 1 AND a.end_time > NOW()
+              AND ' . self::NOT_SOLD . '
             ORDER BY a.end_time ASC
             LIMIT :limit');
         $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
@@ -37,6 +48,7 @@ final class Auction
     {
         $stmt = $this->db->prepare($this->listingSelect() . '
             WHERE a.status = \'active\' AND a.end_time > NOW()
+              AND ' . self::NOT_SOLD . '
             ORDER BY a.end_time ASC
             LIMIT :limit');
         $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
@@ -47,6 +59,8 @@ final class Auction
     /**
      * All active auctions, optionally filtered by category, with a sort mode.
      * Kept broad for the Browse page; filter/sort is driven by query string.
+     * Excludes bought-out items — those live in the buyer's "won" or seller's
+     * "sold" profile tabs.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -59,7 +73,7 @@ final class Auction
             default      => 'a.end_time ASC',
         };
 
-        $where  = "a.status = 'active' AND a.end_time > NOW()";
+        $where  = "a.status = 'active' AND a.end_time > NOW() AND " . self::NOT_SOLD;
         $params = [];
         if ($categoryId !== null) {
             $where       .= ' AND a.category_id = :cat';
@@ -68,6 +82,47 @@ final class Auction
 
         $stmt = $this->db->prepare($this->listingSelect() . ' WHERE ' . $where . ' ORDER BY ' . $orderBy);
         $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Listings the seller has sold via buyout. Mirrors the template's
+     * is_sold rule: buy-now set, current_price >= buy_now_price, has bids.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function soldBySeller(int $sellerId): array
+    {
+        $stmt = $this->db->prepare($this->listingSelect() . '
+            WHERE a.seller_id = :sid
+              AND a.buy_now_price IS NOT NULL
+              AND a.current_price >= a.buy_now_price
+              AND EXISTS (SELECT 1 FROM bids b WHERE b.item_id = a.item_id)
+            ORDER BY a.updated_at DESC');
+        $stmt->execute(['sid' => $sellerId]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Auctions the user won — sold AND their bid equals the final price.
+     * The `Bid::place` lock guarantees only one user can hold a bid equal
+     * to current_price = buy_now_price.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function wonBy(int $userId): array
+    {
+        $stmt = $this->db->prepare($this->listingSelect() . '
+            WHERE a.buy_now_price IS NOT NULL
+              AND a.current_price >= a.buy_now_price
+              AND EXISTS (
+                SELECT 1 FROM bids b
+                WHERE b.item_id = a.item_id
+                  AND b.user_id = :uid
+                  AND b.bid_amount = a.current_price
+              )
+            ORDER BY a.updated_at DESC');
+        $stmt->execute(['uid' => $userId]);
         return $stmt->fetchAll();
     }
 
@@ -178,6 +233,53 @@ final class Auction
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch();
         return $row ?: null;
+    }
+
+    /**
+     * Live-search active auctions by title prefix/contains. LIKE wildcards in
+     * the user's query are escaped so a literal % or _ is treated as text.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function search(string $q, int $limit = 8): array
+    {
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q);
+
+        $stmt = $this->db->prepare(
+            "SELECT a.item_id, a.title, a.current_price, a.end_time,
+                    (SELECT image_url FROM item_images
+                       WHERE item_id = a.item_id
+                       ORDER BY is_primary DESC, display_order ASC
+                       LIMIT 1) AS primary_image
+             FROM auction_items a
+             WHERE a.status = 'active'
+               AND a.end_time > NOW()
+               AND a.title LIKE :needle
+               AND " . self::NOT_SOLD . "
+             ORDER BY a.end_time ASC
+             LIMIT :lim"
+        );
+        $stmt->bindValue(':needle', '%' . $escaped . '%');
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * All images for an auction, primary first then by display order.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function imagesFor(int $itemId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT image_id, image_url, is_primary, display_order
+             FROM item_images
+             WHERE item_id = :id
+             ORDER BY is_primary DESC, display_order ASC, image_id ASC'
+        );
+        $stmt->execute(['id' => $itemId]);
+        return $stmt->fetchAll();
     }
 
     public function updateCurrentPrice(int $itemId, float $amount): void

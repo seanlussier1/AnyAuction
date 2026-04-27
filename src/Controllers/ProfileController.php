@@ -30,14 +30,30 @@ final class ProfileController
         }
 
         $user     = $this->auth->currentUser();
+        $userId   = (int)$user['user_id'];
         $auctions = new Auction($this->db);
 
-        $listings = $auctions->bySeller((int)$user['user_id']);
-        $bids     = $auctions->withBidsFrom((int)$user['user_id']);
+        $allListings = $auctions->bySeller($userId);
+        $allBids     = $auctions->withBidsFrom($userId);
+        $sold        = $auctions->soldBySeller($userId);
+        $won         = $auctions->wonBy($userId);
+
+        // Items already in sold/won shouldn't double-up in the active tabs.
+        $soldIds = array_column($sold, 'item_id');
+        $wonIds  = array_column($won,  'item_id');
+
+        $listings = array_values(array_filter(
+            $allListings,
+            static fn ($l) => !in_array($l['item_id'], $soldIds, true)
+        ));
+        $bids = array_values(array_filter(
+            $allBids,
+            static fn ($b) => !in_array($b['item_id'], $wonIds, true)
+        ));
 
         $stats = [
-            'active_listings' => count(array_filter($listings, static fn ($l) => $l['total_bids'] !== null)),
-            'total_listings'  => count($listings),
+            'active_listings' => count($listings),
+            'total_listings'  => count($allListings),
             'active_bids'     => count($bids),
             'watchlist'       => 0,
             'rating'          => '—',
@@ -47,7 +63,9 @@ final class ProfileController
         return $this->view->render($response, 'pages/profile.twig', [
             'user'     => $user,
             'listings' => $listings,
+            'sold'     => $sold,
             'bids'     => $bids,
+            'won'      => $won,
             'stats'    => $stats,
         ]);
     }

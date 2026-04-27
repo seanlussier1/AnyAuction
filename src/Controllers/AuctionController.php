@@ -31,21 +31,59 @@ final class AuctionController
             return $this->notFound($response);
         }
 
-        $auction = (new Auction($this->db))->findWithDetails($id);
+        $auctionModel = new Auction($this->db);
+        $auction = $auctionModel->findWithDetails($id);
         if (!$auction) {
             return $this->notFound($response);
         }
 
-        $bids = (new Bid($this->db))->forAuction($id, 10);
+        $images = $auctionModel->imagesFor($id);
+        $bids   = (new Bid($this->db))->forAuction($id, 10);
 
         $minBid = (float)$auction['current_price'] + 1.0;
 
         return $this->view->render($response, 'pages/auction_show.twig', [
             'auction'   => $auction,
+            'images'    => $images,
             'bids'      => $bids,
             'min_bid'   => $minBid,
             'csrf'      => $this->ensureCsrfToken(),
         ]);
+    }
+
+    public function buyNow(Request $request, Response $response, array $args): Response
+    {
+        $id = (int)($args['id'] ?? 0);
+
+        if (!$this->auth->isLoggedIn()) {
+            $this->flash->error('You need to log in to buy now.');
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
+
+        $body = (array)$request->getParsedBody();
+
+        if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
+            $this->flash->error('Your session expired. Please try again.');
+            return $response->withHeader('Location', '/auction/' . $id)->withStatus(302);
+        }
+
+        $auction = (new Auction($this->db))->findWithDetails($id);
+        if (!$auction) {
+            return $this->notFound($response);
+        }
+        if ($auction['buy_now_price'] === null) {
+            $this->flash->error('This auction does not offer Buy Now.');
+            return $response->withHeader('Location', '/auction/' . $id)->withStatus(302);
+        }
+
+        try {
+            (new Bid($this->db))->place($id, (int)$_SESSION['user_id'], (float)$auction['buy_now_price']);
+            $this->flash->success('Item secured at the buyout price — proceed to checkout.');
+        } catch (RuntimeException $e) {
+            $this->flash->error($e->getMessage());
+        }
+
+        return $response->withHeader('Location', '/auction/' . $id)->withStatus(302);
     }
 
     public function placeBid(Request $request, Response $response, array $args): Response

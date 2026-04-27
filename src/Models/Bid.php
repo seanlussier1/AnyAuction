@@ -54,7 +54,7 @@ final class Bid
 
         try {
             $lock = $this->db->prepare(
-                'SELECT current_price, status, end_time, seller_id
+                'SELECT current_price, status, end_time, seller_id, buy_now_price
                  FROM auction_items
                  WHERE item_id = :id
                  FOR UPDATE'
@@ -74,6 +74,13 @@ final class Bid
             if ((int)$auction['seller_id'] === $userId) {
                 throw new RuntimeException('You cannot bid on your own auction.');
             }
+
+            // Silently cap at buyout price if set — mirrors the JS cap so a
+            // direct POST bypassing the browser still can't exceed it.
+            if ($auction['buy_now_price'] !== null && $amount > (float)$auction['buy_now_price']) {
+                $amount = (float)$auction['buy_now_price'];
+            }
+
             if ($amount <= (float)$auction['current_price']) {
                 throw new RuntimeException(sprintf(
                     'Bid must be higher than the current price of $%s.',

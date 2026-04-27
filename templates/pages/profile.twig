@@ -62,7 +62,9 @@
 
     <ul class="nav nav-tabs mb-4 flex-nowrap overflow-auto" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-listings"      type="button"><i class="bi bi-shop me-1"></i>My listings</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-sold"          type="button"><i class="bi bi-check-circle me-1"></i>Sold {% if sold|length > 0 %}<span class="badge bg-success-subtle text-success-emphasis ms-1">{{ sold|length }}</span>{% endif %}</button></li>
         <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-bids"          type="button"><i class="bi bi-cart me-1"></i>My bids</button></li>
+        <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-won"           type="button"><i class="bi bi-trophy me-1"></i>Won {% if won|length > 0 %}<span class="badge bg-success-subtle text-success-emphasis ms-1">{{ won|length }}</span>{% endif %}</button></li>
         <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-watchlist"     type="button"><i class="bi bi-heart me-1"></i>Watchlist</button></li>
         <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-orders"        type="button"><i class="bi bi-box me-1"></i>Orders</button></li>
         <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tab-reviews"       type="button"><i class="bi bi-chat-dots me-1"></i>Reviews</button></li>
@@ -95,6 +97,27 @@
             {% endif %}
         </div>
 
+        <div class="tab-pane fade" id="tab-sold" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 mb-0">Sold items</h2>
+                    <div class="small text-muted-aa">{{ sold|length }} sold via Buy Now</div>
+                </div>
+            </div>
+            {% if sold|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-check-circle fs-1 opacity-25 d-block mb-2"></i>
+                    <p>No sold items yet. Sales will appear here once a buyer hits your buyout.</p>
+                </div>
+            {% else %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                    {% for auction in sold %}
+                        <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
         <div class="tab-pane fade" id="tab-bids" role="tabpanel">
             {% if bids|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
@@ -105,6 +128,28 @@
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
                     {% for auction in bids %}
+                        <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="tab-won" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 mb-0">Auctions won</h2>
+                    <div class="small text-muted-aa">{{ won|length }} won at buyout</div>
+                </div>
+            </div>
+            {% if won|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-trophy fs-1 opacity-25 d-block mb-2"></i>
+                    <p>You haven't won any auctions yet. Hit Buy Now on a listing to lock it in.</p>
+                    <a href="/browse" class="text-decoration-none">Browse auctions</a>
+                </div>
+            {% else %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                    {% for auction in won %}
                         <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
                     {% endfor %}
                 </div>

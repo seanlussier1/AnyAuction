@@ -73,9 +73,26 @@ final class SellController
             );
 
             // Handle image uploads
-            $uploadedCount = $this->handleImageUploads($auctionId, $files);
+            $upload = $this->handleImageUploads($auctionId, $files);
 
-            $this->flash->success('Auction created successfully!' . ($uploadedCount > 0 ? " $uploadedCount image(s) uploaded." : ""));
+            $successMsg = 'Auction created successfully!';
+            if ($upload['uploaded'] > 0) {
+                $successMsg .= " {$upload['uploaded']} image(s) uploaded.";
+            }
+            $this->flash->success($successMsg);
+
+            if ($upload['skipped'] > 0) {
+                $tally = array_count_values($upload['reasons']);
+                $parts = [];
+                foreach ($tally as $reason => $n) {
+                    $parts[] = "$n $reason";
+                }
+                $this->flash->add(
+                    'warning',
+                    $upload['skipped'] . ' image(s) skipped: ' . implode(', ', $parts) . '.'
+                );
+            }
+
             return $response->withHeader('Location', '/auction/' . $auctionId)->withStatus(302);
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());
@@ -138,73 +155,105 @@ final class SellController
         return $errors;
     }
 
-    private function handleImageUploads(int $auctionId, array $files): int
+    /**
+     * @param  array<string, mixed> $files
+     * @return array{uploaded: int, skipped: int, reasons: array<int, string>}
+     */
+    private function handleImageUploads(int $auctionId, array $files): array
     {
+        $result = ['uploaded' => 0, 'skipped' => 0, 'reasons' => []];
+
         if (empty($files['images'])) {
-            return -1;
+            return $result;
         }
 
-        $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         $mimeToExt = [
             'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/gif' => 'gif',
+            'image/png'  => 'png',
+            'image/gif'  => 'gif',
             'image/webp' => 'webp',
         ];
         $maxFileSize = 5 * 1024 * 1024; // 5MB
-        $maxFiles = 5;
+        $maxFiles    = 5;
 
         $uploadDir = __DIR__ . '/../../public/assets/uploads/';
-        if (!is_dir($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                throw new RuntimeException('Failed to create upload directory.');
-            }
+        if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            throw new RuntimeException('Failed to create upload directory.');
+        }
+        if (!is_writable($uploadDir)) {
+            throw new RuntimeException('Upload directory is not writable.');
         }
 
-        $images = $files['images'];
-        if (!is_array($images)) {
-            $images = [$images];
-        }
+        $images = is_array($files['images']) ? $files['images'] : [$files['images']];
 
-        $uploadedCount = 0;
-        foreach ($images as $index => $uploadedFile) {
-            if ($uploadedCount >= $maxFiles) {
+        foreach ($images as $uploadedFile) {
+            if ($result['uploaded'] >= $maxFiles) {
+                $result['reasons'][] = 'per-listing limit of 5 reached';
                 break;
             }
 
-            if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            $error = $uploadedFile->getError();
+            if ($error === UPLOAD_ERR_NO_FILE) {
+                continue; // empty slot — not a skip
+            }
+            if ($error !== UPLOAD_ERR_OK) {
+                $result['reasons'][] = 'upload error (code ' . $error . ')';
+                continue;
+            }
+            if (($uploadedFile->getSize() ?? 0) > $maxFileSize) {
+                $result['reasons'][] = 'file too large (max 5MB)';
                 continue;
             }
 
-            $size = $uploadedFile->getSize();
-            if ($size > $maxFileSize) {
-                continue; // Skip large files
-            }
-
-            $mimeType = $uploadedFile->getClientMediaType();
-            if (!in_array($mimeType, $allowedMimeTypes)) {
-                continue; // Skip invalid types
-            }
-
-            $extension = $mimeToExt[$mimeType] ?? 'jpg'; // Fallback
-            $filename = uniqid('auction_' . $auctionId . '_', true) . '.' . $extension;
-            $targetPath = $uploadDir . $filename;
+            $base    = uniqid('auction_' . $auctionId . '_', true);
+            $tmpPath = $uploadDir . $base . '.tmp';
 
             try {
-                $uploadedFile->moveTo($targetPath);
-
-                // Insert into item_images
-                $stmt = $this->db->prepare('INSERT INTO item_images (item_id, image_url, is_primary, display_order) VALUES (?, ?, ?, ?)');
-                $stmt->execute([$auctionId, '/assets/uploads/' . $filename, $uploadedCount === 0 ? 1 : 0, $uploadedCount]);
-
-                $uploadedCount++;
+                $uploadedFile->moveTo($tmpPath);
             } catch (RuntimeException | InvalidArgumentException $e) {
-                // Skip this file
+                $result['reasons'][] = 'could not save file';
                 continue;
             }
+
+            // Server-side MIME detection — client-supplied media type is untrusted
+            // and on some browsers comes back as application/octet-stream for real images.
+            $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+            $detected = $finfo->file($tmpPath) ?: '';
+            if (!isset($mimeToExt[$detected])) {
+                @unlink($tmpPath);
+                $result['reasons'][] = 'unsupported file type';
+                continue;
+            }
+
+            $finalName = $base . '.' . $mimeToExt[$detected];
+            $finalPath = $uploadDir . $finalName;
+            if (!@rename($tmpPath, $finalPath)) {
+                @unlink($tmpPath);
+                $result['reasons'][] = 'could not save file';
+                continue;
+            }
+
+            try {
+                $stmt = $this->db->prepare(
+                    'INSERT INTO item_images (item_id, image_url, is_primary, display_order) VALUES (?, ?, ?, ?)'
+                );
+                $stmt->execute([
+                    $auctionId,
+                    '/assets/uploads/' . $finalName,
+                    $result['uploaded'] === 0 ? 1 : 0,
+                    $result['uploaded'],
+                ]);
+            } catch (\PDOException $e) {
+                @unlink($finalPath);
+                $result['reasons'][] = 'database error';
+                continue;
+            }
+
+            $result['uploaded']++;
         }
 
-        return $uploadedCount;
+        $result['skipped'] = count($result['reasons']);
+        return $result;
     }
 
     private function ensureCsrfToken(): string
