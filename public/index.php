@@ -41,10 +41,22 @@ $app->add(function (Request $request, RequestHandler $handler) use ($container):
     /** @var FlashService $flash */
     $flash = $container->get(FlashService::class);
 
+    if (empty($_SESSION['_csrf'])) {
+        $_SESSION['_csrf'] = bin2hex(random_bytes(16));
+    }
+
+    $watchlistIds = [];
+    if ($auth->isLoggedIn()) {
+        $watchlistIds = (new \App\Models\Watchlist($container->get(\PDO::class)))
+            ->idsForUser((int)$_SESSION['user_id']);
+    }
+
     $env = $twig->getEnvironment();
-    $env->addGlobal('current_user', $auth->currentUser());
-    $env->addGlobal('flash', $flash->pullAll());
-    $env->addGlobal('request_path', $request->getUri()->getPath());
+    $env->addGlobal('current_user',   $auth->currentUser());
+    $env->addGlobal('flash',          $flash->pullAll());
+    $env->addGlobal('request_path',   $request->getUri()->getPath());
+    $env->addGlobal('csrf_token',     $_SESSION['_csrf']);
+    $env->addGlobal('watchlist_ids',  $watchlistIds);
 
     return $handler->handle($request);
 });

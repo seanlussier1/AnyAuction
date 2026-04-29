@@ -24,7 +24,8 @@ return function (App $app): void {
     $app->get('/api/search', [SearchController::class, 'suggest']);
     $app->get('/sell',      [SellController::class, 'showForm']);
     $app->post('/sell',     [SellController::class, 'create']);
-    $app->get('/watchlist', [WatchlistController::class, 'index']);
+    $app->get('/watchlist',                 [WatchlistController::class, 'index']);
+    $app->post('/watchlist/toggle/{id}',    [WatchlistController::class, 'toggle']);
     $app->get('/profile',   [ProfileController::class, 'index']);
     $app->get('/admin',     [AdminController::class, 'index']);
 

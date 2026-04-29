@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Auction;
+use App\Models\Watchlist;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use PDO;
@@ -37,6 +38,7 @@ final class ProfileController
         $allBids     = $auctions->withBidsFrom($userId);
         $sold        = $auctions->soldBySeller($userId);
         $won         = $auctions->wonBy($userId);
+        $watchlist   = (new Watchlist($this->db))->forUser($userId);
 
         // Items already in sold/won shouldn't double-up in the active tabs.
         $soldIds = array_column($sold, 'item_id');
@@ -55,18 +57,19 @@ final class ProfileController
             'active_listings' => count($listings),
             'total_listings'  => count($allListings),
             'active_bids'     => count($bids),
-            'watchlist'       => 0,
+            'watchlist'       => count($watchlist),
             'rating'          => '—',
             'reviews'         => 0,
         ];
 
         return $this->view->render($response, 'pages/profile.twig', [
-            'user'     => $user,
-            'listings' => $listings,
-            'sold'     => $sold,
-            'bids'     => $bids,
-            'won'      => $won,
-            'stats'    => $stats,
+            'user'      => $user,
+            'listings'  => $listings,
+            'sold'      => $sold,
+            'bids'      => $bids,
+            'won'       => $won,
+            'watchlist' => $watchlist,
+            'stats'     => $stats,
         ]);
     }
 }

@@ -157,11 +157,26 @@
         </div>
 
         <div class="tab-pane fade" id="tab-watchlist" role="tabpanel">
-            <div class="text-center py-5 text-muted-aa">
-                <i class="bi bi-heart fs-1 opacity-25 d-block mb-2"></i>
-                <p>Your watchlist will appear here once the <code>watchlists</code> table is wired up.</p>
-                <a href="/watchlist" class="text-decoration-none">Preview watchlist page</a>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 mb-0">Watchlist</h2>
+                    <div class="small text-muted-aa">{{ watchlist|length }} item{{ watchlist|length == 1 ? '' : 's' }}</div>
+                </div>
+                <a href="/watchlist" class="btn btn-outline-secondary btn-sm">Open full watchlist</a>
             </div>
+            {% if watchlist|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-heart fs-1 opacity-25 d-block mb-2"></i>
+                    <p>Nothing watched yet. Click the heart on any listing to save it here.</p>
+                    <a href="/browse" class="text-decoration-none">Browse auctions</a>
+                </div>
+            {% else %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                    {% for auction in watchlist %}
+                        <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
         <div class="tab-pane fade" id="tab-orders" role="tabpanel">

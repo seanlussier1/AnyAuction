@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\Auction;
+use App\Models\Watchlist;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use PDO;
@@ -29,13 +29,68 @@ final class WatchlistController
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
-        // Watchlist persistence comes in a later deliverable. For the visual
-        // baseline we show "Ending Soon" as a pretend watch-set so the page
-        // doesn't look empty on first view.
-        $auctions = (new Auction($this->db))->endingSoon(3);
+        $auctions = (new Watchlist($this->db))->forUser((int)$_SESSION['user_id']);
 
         return $this->view->render($response, 'pages/watchlist.twig', [
             'auctions' => $auctions,
         ]);
+    }
+
+    /**
+     * Toggle membership. Browser hearts call this via fetch and read the JSON
+     * response; a non-AJAX POST (form fallback) gets a redirect to the
+     * referer.
+     */
+    public function toggle(Request $request, Response $response, array $args): Response
+    {
+        $itemId = (int)($args['id'] ?? 0);
+        $wantsJson = str_contains($request->getHeaderLine('Accept'), 'application/json');
+
+        if (!$this->auth->isLoggedIn()) {
+            if ($wantsJson) {
+                return $this->json($response->withStatus(401), ['error' => 'login_required']);
+            }
+            $this->flash->error('Log in to add items to your watchlist.');
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
+
+        $body = (array)$request->getParsedBody();
+        if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
+            if ($wantsJson) {
+                return $this->json($response->withStatus(400), ['error' => 'csrf']);
+            }
+            $this->flash->error('Your session expired. Please try again.');
+            return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
+        }
+
+        if ($itemId <= 0) {
+            if ($wantsJson) {
+                return $this->json($response->withStatus(404), ['error' => 'not_found']);
+            }
+            return $response->withHeader('Location', '/watchlist')->withStatus(302);
+        }
+
+        $watching = (new Watchlist($this->db))
+            ->toggle((int)$_SESSION['user_id'], $itemId);
+
+        if ($wantsJson) {
+            return $this->json($response, ['watching' => $watching, 'item_id' => $itemId]);
+        }
+
+        $referer = $request->getHeaderLine('Referer') ?: '/watchlist';
+        return $response->withHeader('Location', $referer)->withStatus(302);
+    }
+
+    private function json(Response $response, array $payload): Response
+    {
+        $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store');
+    }
+
+    private function verifyCsrf(string $submitted): bool
+    {
+        return isset($_SESSION['_csrf']) && hash_equals($_SESSION['_csrf'], $submitted);
     }
 }

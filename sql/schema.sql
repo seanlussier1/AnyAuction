@@ -4,6 +4,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS watchlists;
 DROP TABLE IF EXISTS bids;
 DROP TABLE IF EXISTS item_images;
 DROP TABLE IF EXISTS auction_items;
@@ -79,6 +80,18 @@ CREATE TABLE bids (
     CONSTRAINT fk_bid_user
         FOREIGN KEY (user_id) REFERENCES users(user_id)         ON DELETE CASCADE,
     INDEX idx_bid_item_time (item_id, bid_time DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE watchlists (
+    user_id     INT NOT NULL,
+    item_id     INT NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, item_id),
+    CONSTRAINT fk_watchlist_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)         ON DELETE CASCADE,
+    CONSTRAINT fk_watchlist_item
+        FOREIGN KEY (item_id) REFERENCES auction_items(item_id) ON DELETE CASCADE,
+    INDEX idx_watchlist_item (item_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

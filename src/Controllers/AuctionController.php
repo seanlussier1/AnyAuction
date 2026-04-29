@@ -8,6 +8,7 @@ use App\Models\Auction;
 use App\Models\Bid;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\NotificationService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -78,6 +79,10 @@ final class AuctionController
 
         try {
             (new Bid($this->db))->place($id, (int)$_SESSION['user_id'], (float)$auction['buy_now_price']);
+            (new NotificationService($this->db))->notifyWatchers($id, 'buyout', [
+                'amount'   => (float)$auction['buy_now_price'],
+                'actor_id' => (int)$_SESSION['user_id'],
+            ]);
             $this->flash->success('Item secured at the buyout price — proceed to checkout.');
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());
@@ -110,6 +115,10 @@ final class AuctionController
 
         try {
             (new Bid($this->db))->place($id, (int)$_SESSION['user_id'], (float)$amount);
+            (new NotificationService($this->db))->notifyWatchers($id, 'bid', [
+                'amount'   => (float)$amount,
+                'actor_id' => (int)$_SESSION['user_id'],
+            ]);
             $this->flash->success(sprintf('Bid of $%s placed successfully.', number_format((float)$amount, 2)));
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());

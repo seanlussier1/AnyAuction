@@ -298,6 +298,15 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    z-index: 2;
+}
+.aa-heart:hover {
+    transform: scale(1.08);
+}
+.aa-heart.is-active {
+    background: rgba(255, 255, 255, 0.95);
 }
 
 /* Auction detail ------------------------------------------------------ */

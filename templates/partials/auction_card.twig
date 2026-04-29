@@ -1,6 +1,9 @@
 {# Expects `auction` in scope. Fields used: item_id, title, current_price,
-   buy_now_price, reserve_price, end_time, featured, primary_image, total_bids #}
+   buy_now_price, reserve_price, end_time, featured, primary_image, total_bids.
+   `watchlist_ids` is a Twig global injected per-request when the user is
+   logged in; used to fill the heart icon. #}
 {% set time_left = auction.end_time|aa_timeleft %}
+{% set is_watched = (watchlist_ids ?? []) and auction.item_id in (watchlist_ids ?? []) %}
 <div class="aa-card">
     <a href="/auction/{{ auction.item_id }}" class="aa-card-img d-block text-decoration-none">
         {% if auction.primary_image %}
@@ -18,8 +21,12 @@
             <span class="aa-badge aa-badge-buynow">Buy Now ${{ auction.buy_now_price|number_format(0) }}</span>
         {% endif %}
 
-        <button type="button" class="aa-heart" aria-label="Add to watchlist" onclick="event.preventDefault();">
-            <i class="bi bi-heart"></i>
+        <button type="button"
+                class="aa-heart{% if is_watched %} is-active{% endif %}"
+                aria-label="{{ is_watched ? 'Remove from watchlist' : 'Add to watchlist' }}"
+                aria-pressed="{{ is_watched ? 'true' : 'false' }}"
+                data-aa-heart="{{ auction.item_id }}">
+            <i class="bi {{ is_watched ? 'bi-heart-fill text-danger' : 'bi-heart' }}"></i>
         </button>
     </a>
 
