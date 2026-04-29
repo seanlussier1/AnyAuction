@@ -1,0 +1,52 @@
+name: Build and push to ECR
+
+# Runs on every push to main, plus manual trigger from the Actions tab.
+# Watchtower on EC2 picks up the :latest tag automatically (~60s after the
+# push step finishes), so the full pipeline is: git push → Actions builds →
+# ECR has new image → Watchtower replaces the running container.
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  AWS_REGION:     us-east-1
+  ECR_REGISTRY:   856802649256.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPOSITORY: anyauction
+
+jobs:
+  build-and-push:
+    name: Build & push image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build, tag, and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Tag both :latest (what Watchtower watches) and :<sha> (so you
+          # can pin / roll back to a specific commit if you ever need to).
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          # GitHub-hosted layer cache makes follow-up builds way faster.
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
