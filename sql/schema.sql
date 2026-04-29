@@ -4,6 +4,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS watchlists;
 DROP TABLE IF EXISTS bids;
 DROP TABLE IF EXISTS item_images;
@@ -92,6 +93,23 @@ CREATE TABLE watchlists (
     CONSTRAINT fk_watchlist_item
         FOREIGN KEY (item_id) REFERENCES auction_items(item_id) ON DELETE CASCADE,
     INDEX idx_watchlist_item (item_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE orders (
+    order_id            INT AUTO_INCREMENT PRIMARY KEY,
+    item_id             INT NOT NULL,
+    buyer_id            INT NOT NULL,
+    amount              DECIMAL(10,2) NOT NULL,
+    stripe_session_id   VARCHAR(255) NOT NULL,
+    status              ENUM('pending','paid','cancelled','failed') NOT NULL DEFAULT 'pending',
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    paid_at             DATETIME NULL,
+    CONSTRAINT fk_order_item
+        FOREIGN KEY (item_id)  REFERENCES auction_items(item_id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_buyer
+        FOREIGN KEY (buyer_id) REFERENCES users(user_id)         ON DELETE CASCADE,
+    UNIQUE KEY uniq_stripe_session (stripe_session_id),
+    INDEX idx_order_item_buyer (item_id, buyer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\StripeService;
 use DI\ContainerBuilder;
 use Psr\Container\ContainerInterface;
 use Slim\Views\Twig;
@@ -66,6 +67,11 @@ return function (ContainerBuilder $builder): void {
         AuthService::class => fn (ContainerInterface $c) => new AuthService(
             $c->get(PDO::class),
             $c->get(FlashService::class)
+        ),
+
+        StripeService::class => fn (ContainerInterface $c) => new StripeService(
+            secretKey: (string)$c->get('settings')['stripe']['secret_key'],
+            baseUrl:   (string)$c->get('settings')['stripe']['base_url']
         ),
     ]);
 };

@@ -25,6 +25,11 @@ return [
         'user' => $_ENV['DB_USER'] ?? 'root',
         'pass' => $_ENV['DB_PASS'] ?? '',
     ],
+    'stripe' => [
+        'publishable_key' => $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
+        'secret_key'      => $_ENV['STRIPE_SECRET_KEY']      ?? '',
+        'base_url'        => $_ENV['APP_BASE_URL']           ?? 'http://localhost:8000',
+    ],
     'paths' => [
         'root' => $rootPath,
         'templates' => $rootPath . '/templates',

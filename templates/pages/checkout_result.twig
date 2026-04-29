@@ -1,0 +1,71 @@
+{% extends 'layout.twig' %}
+{% block title %}Checkout — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 36rem;">
+    {% if state == 'paid' %}
+        <div class="text-center mb-4">
+            <i class="bi bi-check-circle-fill text-emerald" style="font-size: 4rem;"></i>
+            <h1 class="h3 mt-3">Payment confirmed</h1>
+            <p class="text-muted-aa">Thanks for your purchase. A copy of this confirmation is in your profile under <strong>Orders</strong>.</p>
+        </div>
+
+        {% if order %}
+            <div class="p-4 rounded-xl border bg-surface-aa">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted-aa">Order</span>
+                    <span class="fw-medium">#{{ order.order_id }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted-aa">Amount</span>
+                    <span class="fw-medium">${{ order.amount|number_format(2) }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted-aa">Status</span>
+                    <span class="badge bg-success-subtle text-success-emphasis text-capitalize">{{ order.status }}</span>
+                </div>
+                {% if order.paid_at %}
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted-aa">Paid at</span>
+                        <span>{{ order.paid_at|date('M j, Y g:i a') }}</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <a href="/auction/{{ order.item_id }}" class="btn btn-outline-secondary flex-fill">View item</a>
+                <a href="/profile" class="btn btn-primary flex-fill">My orders</a>
+            </div>
+        {% endif %}
+
+    {% elseif state == 'pending' %}
+        <div class="text-center">
+            <i class="bi bi-hourglass-split text-warning-emphasis" style="font-size: 4rem;"></i>
+            <h1 class="h3 mt-3">Payment processing</h1>
+            <p class="text-muted-aa">Stripe hasn't confirmed payment yet. Refresh in a moment.</p>
+            <a href="/profile" class="btn btn-primary mt-2">Back to profile</a>
+        </div>
+
+    {% elseif state == 'cancelled' %}
+        <div class="text-center">
+            <i class="bi bi-x-circle text-muted-aa" style="font-size: 4rem;"></i>
+            <h1 class="h3 mt-3">Checkout cancelled</h1>
+            <p class="text-muted-aa">No charge was made. You can complete the purchase whenever you're ready.</p>
+            <div class="d-flex gap-2 justify-content-center mt-3">
+                {% if item_id %}
+                    <a href="/auction/{{ item_id }}" class="btn btn-primary">Back to listing</a>
+                {% endif %}
+                <a href="/browse" class="btn btn-outline-secondary">Browse</a>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="text-center">
+            <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i>
+            <h1 class="h3 mt-3">Something went wrong</h1>
+            <p class="text-muted-aa">{{ message ?? 'We could not verify your checkout session.' }}</p>
+            <a href="/profile" class="btn btn-primary">Back to profile</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -119,10 +119,21 @@
 
             {% if is_sold %}
                 {% if is_winner %}
-                    <button type="button" class="btn btn-emerald w-100" disabled title="Stripe checkout coming in a later deliverable">
-                        <i class="bi bi-credit-card me-2"></i>Complete Purchase — ${{ auction.buy_now_price|number_format(2) }}
-                    </button>
-                    <div class="small text-muted-aa">You won this item — checkout coming soon.</div>
+                    {% if order_paid %}
+                        <div class="alert alert-success mb-0">
+                            <i class="bi bi-check-circle-fill me-1"></i>
+                            You paid for this item on {{ order_paid_at|date('M j, Y g:i a') }}.
+                            <a href="/profile" class="text-decoration-none">View order</a>
+                        </div>
+                    {% else %}
+                        <form action="/checkout/start/{{ auction.item_id }}" method="post" class="m-0">
+                            <input type="hidden" name="_csrf" value="{{ csrf }}">
+                            <button type="submit" class="btn btn-emerald w-100">
+                                <i class="bi bi-credit-card me-2"></i>Complete Purchase — ${{ auction.buy_now_price|number_format(2) }}
+                            </button>
+                        </form>
+                        <div class="small text-muted-aa">You'll be redirected to Stripe (test mode) to enter your card.</div>
+                    {% endif %}
                 {% else %}
                     <div class="alert alert-secondary mb-0">
                         <i class="bi bi-info-circle me-1"></i>

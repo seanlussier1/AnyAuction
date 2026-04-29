@@ -6,6 +6,7 @@ use App\Controllers\AdminController;
 use App\Controllers\AuctionController;
 use App\Controllers\AuthController;
 use App\Controllers\BrowseController;
+use App\Controllers\CheckoutController;
 use App\Controllers\HomeController;
 use App\Controllers\ProfileController;
 use App\Controllers\SearchController;
@@ -19,6 +20,10 @@ return function (App $app): void {
     $app->get('/auction/{id}', [AuctionController::class, 'show']);
     $app->post('/auction/{id}/bid',     [AuctionController::class, 'placeBid']);
     $app->post('/auction/{id}/buy-now', [AuctionController::class, 'buyNow']);
+
+    $app->post('/checkout/start/{id}',  [CheckoutController::class, 'start']);
+    $app->get('/checkout/success',      [CheckoutController::class, 'success']);
+    $app->get('/checkout/cancel',       [CheckoutController::class, 'cancel']);
 
     $app->get('/browse',     [BrowseController::class, 'index']);
     $app->get('/api/search', [SearchController::class, 'suggest']);

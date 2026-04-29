@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Auction;
+use App\Models\Order;
 use App\Models\Watchlist;
 use App\Services\AuthService;
 use App\Services\FlashService;
@@ -39,6 +40,7 @@ final class ProfileController
         $sold        = $auctions->soldBySeller($userId);
         $won         = $auctions->wonBy($userId);
         $watchlist   = (new Watchlist($this->db))->forUser($userId);
+        $orders      = (new Order($this->db))->forBuyer($userId);
 
         // Items already in sold/won shouldn't double-up in the active tabs.
         $soldIds = array_column($sold, 'item_id');
@@ -69,6 +71,7 @@ final class ProfileController
             'bids'      => $bids,
             'won'       => $won,
             'watchlist' => $watchlist,
+            'orders'    => $orders,
             'stats'     => $stats,
         ]);
     }

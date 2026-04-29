@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Models\Auction;
 use App\Models\Bid;
+use App\Models\Order;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\NotificationService;
@@ -43,12 +44,26 @@ final class AuctionController
 
         $minBid = (float)$auction['current_price'] + 1.0;
 
+        // If the current user already paid for this listing, surface the
+        // confirmation on the page instead of the Complete Purchase button.
+        $orderPaid   = false;
+        $orderPaidAt = null;
+        if ($this->auth->isLoggedIn()) {
+            $existing = (new Order($this->db))->existingForItemAndBuyer($id, (int)$_SESSION['user_id']);
+            if ($existing !== null && $existing['status'] === 'paid') {
+                $orderPaid   = true;
+                $orderPaidAt = $existing['paid_at'];
+            }
+        }
+
         return $this->view->render($response, 'pages/auction_show.twig', [
-            'auction'   => $auction,
-            'images'    => $images,
-            'bids'      => $bids,
-            'min_bid'   => $minBid,
-            'csrf'      => $this->ensureCsrfToken(),
+            'auction'       => $auction,
+            'images'        => $images,
+            'bids'          => $bids,
+            'min_bid'       => $minBid,
+            'csrf'          => $this->ensureCsrfToken(),
+            'order_paid'    => $orderPaid,
+            'order_paid_at' => $orderPaidAt,
         ]);
     }
 

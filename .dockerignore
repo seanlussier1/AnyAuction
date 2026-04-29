@@ -1,0 +1,39 @@
+# Keep the build context small and the image free of secrets / dev junk.
+.git
+.gitignore
+.github
+
+# Secrets — never bake these into an image. Pass via `docker run -e ...`.
+.env
+.env.*
+!.env.example
+
+# Dev-only tooling
+docker-compose.yml
+docker-compose.*.yml
+
+# IDE / editor scratch
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts (composer install runs inside the image)
+vendor/
+node_modules/
+
+# Runtime artifacts that shouldn't be baked in
+public/assets/uploads/*
+!public/assets/uploads/.gitkeep
+*.log
+sessions/
+cache/
+tmp/
+
+# Docs (optional — drop the *.md exclusion if you want README in the image)
+*.md

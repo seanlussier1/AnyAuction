@@ -180,10 +180,46 @@
         </div>
 
         <div class="tab-pane fade" id="tab-orders" role="tabpanel">
-            <div class="text-center py-5 text-muted-aa">
-                <i class="bi bi-box fs-1 opacity-25 d-block mb-2"></i>
-                <p>Order history lives behind Stripe checkout — coming in a later deliverable.</p>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 mb-0">Orders</h2>
+                    <div class="small text-muted-aa">{{ orders|length }} total</div>
+                </div>
             </div>
+            {% if orders|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-box fs-1 opacity-25 d-block mb-2"></i>
+                    <p>No orders yet. Win an auction and complete checkout to see it here.</p>
+                </div>
+            {% else %}
+                <div class="d-flex flex-column gap-2">
+                    {% for o in orders %}
+                        <a href="/auction/{{ o.item_id }}" class="d-flex align-items-center gap-3 p-3 rounded-lg-aa border text-decoration-none text-dark">
+                            {% if o.primary_image %}
+                                <img src="{{ o.primary_image }}" alt="" style="width: 56px; height: 56px; object-fit: cover; border-radius: 0.5rem; flex-shrink: 0;">
+                            {% else %}
+                                <span class="aa-brand-badge" style="width: 56px; height: 56px; flex-shrink: 0;"><i class="bi bi-image fs-4"></i></span>
+                            {% endif %}
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-medium text-truncate">{{ o.title }}</div>
+                                <div class="small text-muted-aa">Order #{{ o.order_id }} · {{ o.created_at|date('M j, Y') }}</div>
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <div class="fw-medium">${{ o.amount|number_format(2) }}</div>
+                                {% if o.status == 'paid' %}
+                                    <span class="badge bg-success-subtle text-success-emphasis">Paid</span>
+                                {% elseif o.status == 'pending' %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis">Pending</span>
+                                {% elseif o.status == 'cancelled' %}
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">Cancelled</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">{{ o.status|capitalize }}</span>
+                                {% endif %}
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
         <div class="tab-pane fade" id="tab-reviews" role="tabpanel">
