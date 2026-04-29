@@ -310,33 +310,8 @@
 </div>
 {% endif %}
 
-<script>
-(function () {
-    const input = document.getElementById('aa-bid-amount');
-    const hint  = document.getElementById('aa-bid-cap-hint');
-    if (!input) return;
+{% endblock %}
 
-    const max = parseFloat(input.getAttribute('max'));
-    if (!Number.isFinite(max)) return;
-
-    let hideTimer = null;
-    function showHint() {
-        if (!hint) return;
-        hint.hidden = false;
-        clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => { hint.hidden = true; }, 3000);
-    }
-
-    function cap() {
-        const v = parseFloat(input.value);
-        if (Number.isFinite(v) && v > max) {
-            input.value = max.toFixed(2);
-            showHint();
-        }
-    }
-
-    input.addEventListener('input', cap);
-    input.addEventListener('change', cap);
-})();
-</script>
+{% block scripts %}
+<script src="/assets/js/auction-bid-cap.js" defer></script>
 {% endblock %}

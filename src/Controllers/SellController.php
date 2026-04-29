@@ -56,13 +56,31 @@ final class SellController
 
         // Validation
         $errors = $this->validateAuctionData($body);
+
+        // At least one usable image is required. We check before creating
+        // the auction row so we don't end up with a sold-but-image-less item.
+        $hasImage = false;
+        if (!empty($files['images'])) {
+            $imgs = is_array($files['images']) ? $files['images'] : [$files['images']];
+            foreach ($imgs as $f) {
+                if ($f->getError() === UPLOAD_ERR_OK && (int)$f->getSize() > 0) {
+                    $hasImage = true;
+                    break;
+                }
+            }
+        }
+        if (!$hasImage) {
+            $errors['images'] = 'Please add at least one photo.';
+        }
+
         if (!empty($errors)) {
             $this->flash->error('Please correct the errors below.');
             $categories = (new Category($this->db))->all();
             return $this->view->render($response, 'pages/sell.twig', [
                 'categories' => $categories,
-                'errors' => $errors,
-                'old' => $body,
+                'errors'     => $errors,
+                'old'        => $body,
+                'csrf'       => $this->ensureCsrfToken(),
             ]);
         }
 
@@ -128,21 +146,32 @@ final class SellController
             $errors['starting_price'] = 'Starting price must be a positive number.';
         }
 
-        // Reserve price (optional)
+        // Reserve price (optional). Must be strictly greater than the
+        // starting price — equal-valued fields trick sellers into thinking
+        // they've set a reserve when there's effectively none.
         if (!empty($data['reserve_price'])) {
             $reservePrice = filter_var($data['reserve_price'], FILTER_VALIDATE_FLOAT);
             if ($reservePrice === false || $reservePrice < 0) {
                 $errors['reserve_price'] = 'Reserve price must be a positive number.';
-            } elseif ($reservePrice < $startingPrice) {
-                $errors['reserve_price'] = 'Reserve price must be at least the starting price.';
+            } elseif ($startingPrice !== false && $reservePrice <= $startingPrice) {
+                $errors['reserve_price'] = 'Reserve price must be greater than the starting price.';
             }
         }
 
-        // Buy now price (optional)
+        // Buy now price (optional). Same idea — letting it equal the
+        // starting price means the auction is effectively a one-click buy
+        // before any bidding can happen. Must also clear the reserve when
+        // both are set, otherwise a buyout sale wouldn't satisfy the reserve.
         if (!empty($data['buy_now_price'])) {
             $buyNowPrice = filter_var($data['buy_now_price'], FILTER_VALIDATE_FLOAT);
             if ($buyNowPrice === false || $buyNowPrice < 0) {
                 $errors['buy_now_price'] = 'Buy now price must be a positive number.';
+            } elseif ($startingPrice !== false && $buyNowPrice <= $startingPrice) {
+                $errors['buy_now_price'] = 'Buy now price must be greater than the starting price.';
+            } elseif (!empty($data['reserve_price'])
+                      && isset($reservePrice) && $reservePrice !== false
+                      && $buyNowPrice <= $reservePrice) {
+                $errors['buy_now_price'] = 'Buy now price must be greater than the reserve price.';
             }
         }
 

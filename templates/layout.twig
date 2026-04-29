@@ -33,56 +33,8 @@
 {% include 'partials/footer.twig' %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-// Global heart toggle for any [data-aa-heart] button on the page.
-// Submits to /watchlist/toggle/{id}, updates the icon from the JSON response.
-(function () {
-    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    const csrf     = csrfMeta ? csrfMeta.getAttribute('content') : '';
-
-    document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('[data-aa-heart]');
-        if (!btn) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        const itemId = btn.getAttribute('data-aa-heart');
-        if (!itemId) return;
-
-        const fd = new FormData();
-        fd.append('_csrf', csrf);
-
-        try {
-            const r = await fetch('/watchlist/toggle/' + encodeURIComponent(itemId), {
-                method: 'POST',
-                headers: { 'Accept': 'application/json' },
-                body: fd
-            });
-            if (r.status === 401) {
-                window.location.href = '/login';
-                return;
-            }
-            if (!r.ok) return;
-            const data = await r.json();
-            const icon = btn.querySelector('i');
-            if (data.watching) {
-                icon.classList.remove('bi-heart');
-                icon.classList.add('bi-heart-fill', 'text-danger');
-                btn.classList.add('is-active');
-                btn.setAttribute('aria-pressed', 'true');
-                btn.setAttribute('aria-label', 'Remove from watchlist');
-            } else {
-                icon.classList.remove('bi-heart-fill', 'text-danger');
-                icon.classList.add('bi-heart');
-                btn.classList.remove('is-active');
-                btn.setAttribute('aria-pressed', 'false');
-                btn.setAttribute('aria-label', 'Add to watchlist');
-            }
-        } catch (_) { /* silent */ }
-    });
-})();
-</script>
+<script src="/assets/js/heart-toggle.js" defer></script>
+<script src="/assets/js/search-suggest.js" defer></script>
 
 {% block scripts %}{% endblock %}
 </body>

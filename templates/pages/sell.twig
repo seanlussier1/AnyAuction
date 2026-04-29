@@ -22,11 +22,11 @@
     </div>
     {% endif %}
 
-    <form action="" method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4">
+    <form action="" method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4" id="sell-form" novalidate>
 
         <section>
-            <h5>Photos</h5>
-            <p class="small text-muted-aa">Add up to 5 photos. The first image is the main listing photo.</p>
+            <h5>Photos <span class="text-danger">*</span></h5>
+            <p class="small text-muted-aa">Add 1 to 5 photos. The first image is the main listing photo.</p>
             <div class="d-flex flex-wrap gap-3">
                 <label for="image-upload" class="border border-2 border-dashed rounded d-flex flex-column align-items-center justify-content-center text-muted" style="width: 96px; height: 96px; cursor: pointer; background-color: #f8f9fa;">
                     <i class="bi bi-upload fs-5"></i>
@@ -35,6 +35,7 @@
                 <input type="file" id="image-upload" name="images[]" accept="image/*" multiple style="display: none;">
             </div>
             <div id="image-previews" class="d-flex flex-wrap gap-3 mt-3"></div>
+            <div id="images-error" class="text-danger small mt-2" hidden></div>
             <p class="small text-muted mt-2"><i class="bi bi-image me-1"></i>Images will be uploaded to the server.</p>
         </section>
 
@@ -79,22 +80,27 @@
                     <label class="form-label small text-muted-aa">Starting price <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input type="number" step="0.01" min="0" name="starting_price" class="form-control" placeholder="0.00" required value="{{ old.starting_price ?? '' }}">
+                        <input type="number" step="0.01" min="0" name="starting_price" id="starting-price"
+                               class="form-control" placeholder="0.00" required value="{{ old.starting_price ?? '' }}">
                     </div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small text-muted-aa">Reserve price</label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input type="number" step="0.01" min="0" name="reserve_price" class="form-control" placeholder="Optional" value="{{ old.reserve_price ?? '' }}">
+                        <input type="number" step="0.01" min="0" name="reserve_price" id="reserve-price"
+                               class="form-control" placeholder="Optional" value="{{ old.reserve_price ?? '' }}">
                     </div>
+                    <div id="reserve-error" class="text-danger small mt-1" hidden></div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small text-muted-aa">Buy Now price</label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input type="number" step="0.01" min="0" name="buy_now_price" class="form-control" placeholder="Optional" value="{{ old.buy_now_price ?? '' }}">
+                        <input type="number" step="0.01" min="0" name="buy_now_price" id="buy-now-price"
+                               class="form-control" placeholder="Optional" value="{{ old.buy_now_price ?? '' }}">
                     </div>
+                    <div id="buy-now-error" class="text-danger small mt-1" hidden></div>
                 </div>
             </div>
         </section>
@@ -140,46 +146,8 @@
     </form>
 </div>
 
-<script>
-document.getElementById('image-upload').addEventListener('change', function(e) {
-    const previews = document.getElementById('image-previews');
-    previews.innerHTML = ''; // Clear existing previews
+{% endblock %}
 
-    const files = Array.from(e.target.files);
-    files.forEach((file, index) => {
-        if (!file.type.startsWith('image/')) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const previewDiv = document.createElement('div');
-            previewDiv.className = 'position-relative';
-            previewDiv.style.width = '96px';
-            previewDiv.style.height = '96px';
-
-            const img = document.createElement('img');
-            img.src = e.target.result;
-            img.className = 'img-thumbnail';
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
-
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'btn btn-sm btn-danger position-absolute';
-            removeBtn.style.top = '2px';
-            removeBtn.style.right = '2px';
-            removeBtn.innerHTML = '×';
-            removeBtn.onclick = function() {
-                previewDiv.remove();
-            };
-
-            previewDiv.appendChild(img);
-            previewDiv.appendChild(removeBtn);
-            previews.appendChild(previewDiv);
-        };
-        reader.readAsDataURL(file);
-    });
-});
-</script>
-
+{% block scripts %}
+<script src="/assets/js/sell-form.js" defer></script>
 {% endblock %}
