@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\StripeService;
+use App\Services\TwilioService;
 use DI\ContainerBuilder;
 use Psr\Container\ContainerInterface;
 use Slim\Views\Twig;
@@ -72,6 +73,12 @@ return function (ContainerBuilder $builder): void {
         StripeService::class => fn (ContainerInterface $c) => new StripeService(
             secretKey: (string)$c->get('settings')['stripe']['secret_key'],
             baseUrl:   (string)$c->get('settings')['stripe']['base_url']
+        ),
+
+        TwilioService::class => fn (ContainerInterface $c) => new \App\Services\TwilioService(
+            accountSid: (string)$c->get('settings')['twilio']['account_sid'],
+            authToken:  (string)$c->get('settings')['twilio']['auth_token'],
+            fromNumber: (string)$c->get('settings')['twilio']['from_number']
         ),
     ]);
 };

@@ -30,6 +30,11 @@ return [
         'secret_key'      => $_ENV['STRIPE_SECRET_KEY']      ?? '',
         'base_url'        => $_ENV['APP_BASE_URL']           ?? 'http://localhost:8000',
     ],
+    'twilio' => [
+        'account_sid' => $_ENV['TWILIO_ACCOUNT_SID'] ?? '',
+        'auth_token'  => $_ENV['TWILIO_AUTH_TOKEN']  ?? '',
+        'from_number' => $_ENV['TWILIO_FROM_NUMBER'] ?? '',
+    ],
     'paths' => [
         'root' => $rootPath,
         'templates' => $rootPath . '/templates',

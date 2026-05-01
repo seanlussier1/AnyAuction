@@ -14,6 +14,7 @@
             <p class="text-muted-aa mb-4">Sign in to continue bidding and selling.</p>
 
             <form method="post" action="/login" class="d-flex flex-column gap-3">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
                 <div>
                     <label class="form-label small text-muted-aa">Email</label>
                     <div class="input-group">
@@ -25,7 +26,7 @@
                 <div>
                     <label class="form-label small text-muted-aa d-flex justify-content-between">
                         <span>Password</span>
-                        <a href="#" class="text-decoration-none small">Forgot password?</a>
+                        <a href="/forgot-password" class="text-decoration-none small">Forgot password?</a>
                     </label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-lock"></i></span>

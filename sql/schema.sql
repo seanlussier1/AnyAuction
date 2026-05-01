@@ -9,23 +9,41 @@ DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS watchlists;
 DROP TABLE IF EXISTS bids;
+DROP TABLE IF EXISTS sms_conversations;
 DROP TABLE IF EXISTS item_images;
 DROP TABLE IF EXISTS auction_items;
 DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS auth_codes;
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
-    user_id          INT AUTO_INCREMENT PRIMARY KEY,
-    username         VARCHAR(50)  NOT NULL UNIQUE,
-    email            VARCHAR(255) NOT NULL UNIQUE,
-    password_hash    VARCHAR(255) NOT NULL,
-    first_name       VARCHAR(100) NOT NULL,
-    last_name        VARCHAR(100) NOT NULL,
-    profile_picture  VARCHAR(500) NULL,
-    role             ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',
-    is_verified      TINYINT(1)   NOT NULL DEFAULT 0,
-    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    user_id            INT AUTO_INCREMENT PRIMARY KEY,
+    username           VARCHAR(50)  NOT NULL UNIQUE,
+    email              VARCHAR(255) NOT NULL UNIQUE,
+    phone              VARCHAR(16)  NULL,
+    password_hash      VARCHAR(255) NOT NULL,
+    first_name         VARCHAR(100) NOT NULL,
+    last_name          VARCHAR(100) NOT NULL,
+    profile_picture    VARCHAR(500) NULL,
+    role               ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',
+    is_verified        TINYINT(1)   NOT NULL DEFAULT 0,
+    phone_verified_at  DATETIME     NULL,
+    sms_opt_out        TINYINT(1)   NOT NULL DEFAULT 0,
+    created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE auth_codes (
+    code_id      INT AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT NOT NULL,
+    purpose      ENUM('login','password_reset','phone_verify') NOT NULL,
+    code_hash    VARCHAR(255) NOT NULL,
+    expires_at   DATETIME NOT NULL,
+    used_at      DATETIME NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_auth_codes_user_purpose (user_id, purpose, used_at),
+    INDEX idx_auth_codes_expires (expires_at),
+    CONSTRAINT fk_auth_codes_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE categories (
@@ -143,6 +161,20 @@ CREATE TABLE sessions (
     INDEX idx_sessions_last_activity (last_activity),
     CONSTRAINT fk_sessions_user
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE sms_conversations (
+    phone_number    VARCHAR(16) PRIMARY KEY,
+    user_id         INT NULL,
+    state           ENUM('waiting_amount','waiting_confirm') NOT NULL,
+    item_id         INT NULL,
+    pending_amount  DECIMAL(10,2) NULL,
+    expires_at      DATETIME NOT NULL,
+    updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sms_conv_user (user_id),
+    INDEX idx_sms_conv_expires (expires_at),
+    CONSTRAINT fk_sms_conv_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_sms_conv_item FOREIGN KEY (item_id) REFERENCES auction_items(item_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

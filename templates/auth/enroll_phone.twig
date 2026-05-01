@@ -1,0 +1,68 @@
+{% extends 'layout.twig' %}
+{% block title %}Verify your phone — AnyAuction{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 28rem;">
+    <a href="/" class="d-flex align-items-center gap-2 text-decoration-none text-dark mb-4">
+        <span class="aa-brand-badge"><i class="bi bi-hammer"></i></span>
+        <span class="fs-5">AnyAuction</span>
+    </a>
+
+    {% if step == 'code' %}
+        <h1 class="h3 mb-1">Verify your phone</h1>
+        <p class="text-muted-aa mb-4">
+            Enter the 6-digit code we just texted to{% if phone_mask %} {{ phone_mask }}{% else %} your phone{% endif %}.
+        </p>
+
+        <form method="post" action="/enroll-phone" class="d-flex flex-column gap-3">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+            <input type="hidden" name="step" value="code">
+
+            <div>
+                <label class="form-label small text-muted-aa">6-digit code</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                    <input type="text" name="code" class="form-control"
+                           inputmode="numeric" pattern="\d{6}" maxlength="6"
+                           autocomplete="one-time-code"
+                           placeholder="123456" required autofocus>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary py-2">
+                Verify phone <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </form>
+
+        <p class="small text-muted-aa mt-3 mb-0">
+            <a href="/enroll-phone?step=phone" class="text-decoration-none">Use a different number</a>
+        </p>
+    {% else %}
+        <h1 class="h3 mb-1">Add your phone</h1>
+        <p class="text-muted-aa mb-4">
+            We use SMS to keep your account secure. Enter a US or Canada number and we'll text you a code.
+        </p>
+
+        <form method="post" action="/enroll-phone" class="d-flex flex-column gap-3">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+            <input type="hidden" name="step" value="phone">
+
+            <div>
+                <label class="form-label small text-muted-aa">Mobile phone</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                    <input type="tel" name="phone" class="form-control"
+                           autocomplete="tel"
+                           placeholder="(555) 123-4567" required autofocus
+                           value="{{ old.phone|default('') }}">
+                </div>
+                <div class="form-text">US or Canada only. Standard message rates apply.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary py-2">
+                Send code <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

@@ -4,30 +4,32 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\SmsConversation;
 use App\Models\Watchlist;
 use PDO;
 
 /**
- * Stub for the bid/buyout notification fan-out.
+ * Bid/buyout notification fan-out.
  *
- * Today this is a no-op so call sites in the bid/buyout controllers stay
- * stable. When the Twilio integration lands the body of `notifyWatchers`
- * fills in:
- *
- *   1. Pull each watcher's phone + opt-in flag (future
- *      `user_notification_prefs` table).
- *   2. POST to Twilio Programmable Messaging with a per-event template
- *      ("New bid on {title}: ${amount}", "{title} was bought out for
- *      ${amount}", etc.).
- *   3. Record delivery status / errors for retry.
+ * Today the watchlist + bidder fan-outs are still no-ops (those go through a
+ * future opt-in/throttle table). The outbid path IS live — when a buyer is
+ * displaced as the high bidder we send them an SMS that opens an inbound
+ * conversation in `sms_conversations`, so they can text back a counter-bid.
  *
  * The bidder themselves should be excluded from the fan-out — pass their
  * user id via `$context['actor_id']`.
  */
 final class NotificationService
 {
-    public function __construct(private readonly PDO $db)
-    {
+    /** Outbid conversations live for 30 minutes — long enough to glance at
+     *  a phone and reply, short enough that a stale row from yesterday
+     *  doesn't get matched against an unrelated text. */
+    private const OUTBID_CONVERSATION_TTL_SECONDS = 1800;
+
+    public function __construct(
+        private readonly PDO $db,
+        private readonly TwilioService $twilio
+    ) {
     }
 
     /**
@@ -44,9 +46,9 @@ final class NotificationService
         $watchers = array_values(array_filter($watchers, static fn ($uid) => $uid !== $actorId));
 
         // TODO(twilio): dispatch per-watcher SMS using $event + $context.
-        // Intentionally a no-op until the Twilio credentials + phone-opt-in
-        // table land. Keeping the call here so the bid/buyout flow already
-        // hits the right hook.
+        // Intentionally a no-op until the per-user opt-in/throttle table
+        // lands. Keeping the call here so the bid/buyout flow already hits
+        // the right hook.
         unset($watchers, $event);
     }
 
@@ -83,5 +85,66 @@ final class NotificationService
         //    extended by {extension_seconds/60} minutes and now ends at
         //    {new_end_time}. Reply STOP to opt out."
         unset($bidders, $event);
+    }
+
+    /**
+     * Tell the displaced high bidder they've been outbid. We:
+     *   1. Look up their phone + opt-in. Skip silently if unverified or opted out.
+     *   2. Open (or replace) an `sms_conversations` row in `waiting_amount` state
+     *      so a follow-up reply with a dollar amount routes through the
+     *      Twilio webhook back into Bid::place.
+     *   3. Send the SMS via TwilioService (which is itself a silent no-op when
+     *      Twilio creds are unset, so dev environments don't 500).
+     *
+     * Caller is responsible for not invoking when previous_bidder_id matches
+     * the new bidder (e.g. raising your own max bid shouldn't text yourself).
+     */
+    public function notifyOutbid(int $itemId, int $previousBidderId, float $newAmount): void
+    {
+        $userStmt = $this->db->prepare(
+            'SELECT phone, phone_verified_at, sms_opt_out
+             FROM users
+             WHERE user_id = :id'
+        );
+        $userStmt->execute(['id' => $previousBidderId]);
+        $user = $userStmt->fetch();
+        if (!$user) {
+            return;
+        }
+
+        $phone = (string)($user['phone'] ?? '');
+        if ($phone === '' || $user['phone_verified_at'] === null) {
+            return;
+        }
+        if ((int)$user['sms_opt_out'] === 1) {
+            return;
+        }
+
+        $titleStmt = $this->db->prepare(
+            'SELECT title FROM auction_items WHERE item_id = :id'
+        );
+        $titleStmt->execute(['id' => $itemId]);
+        $title = (string)$titleStmt->fetchColumn();
+        if ($title === '') {
+            return;
+        }
+
+        // Open the conversation BEFORE sending the SMS so the buyer's reply
+        // never races a missing row. INSERT … ON DUPLICATE KEY UPDATE means
+        // a fresh outbid resets any half-completed prior conversation.
+        (new SmsConversation($this->db))->upsertWaitingAmount(
+            $phone,
+            $previousBidderId,
+            $itemId,
+            self::OUTBID_CONVERSATION_TTL_SECONDS
+        );
+
+        $body = sprintf(
+            "AnyAuction: a buyer outbid you on '%s' at $%s. Reply with a new bid amount or STOP to opt out.",
+            $title,
+            number_format($newAmount, 2)
+        );
+
+        $this->twilio->sendSms($phone, $body);
     }
 }

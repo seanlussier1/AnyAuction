@@ -47,6 +47,8 @@ final class Bid
      * Atomically place a bid:
      *   - locks the auction row,
      *   - re-checks status + end_time + minimum amount,
+     *   - captures the previous high bidder (so the controller can fan out
+     *     an outbid SMS without a second round trip to the DB),
      *   - inserts the bid,
      *   - updates the auction's current_price,
      *   - extends end_time if the bid lands inside the snipe window
@@ -60,7 +62,9 @@ final class Bid
      *   amount: float,
      *   snipe_extended: bool,
      *   new_end_time: ?string,
-     *   extension_seconds: int
+     *   extension_seconds: int,
+     *   previous_bidder_id: ?int,
+     *   previous_bid_amount: ?float
      * }
      */
     public function place(int $itemId, int $userId, float $amount): array
@@ -106,6 +110,21 @@ final class Bid
                     number_format((float)$auction['current_price'], 2)
                 ));
             }
+
+            // Snapshot the existing high bidder BEFORE the INSERT so callers
+            // can fire an outbid SMS. Inside the transaction so the row we
+            // see is the one that was actually displaced. Index on
+            // (item_id, bid_time DESC) keeps this cheap.
+            $prev = $this->db->prepare(
+                'SELECT user_id, bid_amount FROM bids
+                 WHERE item_id = :i
+                 ORDER BY bid_amount DESC, bid_id DESC
+                 LIMIT 1'
+            );
+            $prev->execute(['i' => $itemId]);
+            $previousHighBidder  = $prev->fetch() ?: null;
+            $previousBidderId    = $previousHighBidder ? (int)$previousHighBidder['user_id']    : null;
+            $previousBidAmount   = $previousHighBidder ? (float)$previousHighBidder['bid_amount'] : null;
 
             $insert = $this->db->prepare(
                 'INSERT INTO bids (item_id, user_id, bid_amount)
@@ -155,11 +174,13 @@ final class Bid
 
             $this->db->commit();
             return [
-                'bid_id'            => $bidId,
-                'amount'            => $amount,
-                'snipe_extended'    => $snipeExtended,
-                'new_end_time'      => $newEndTime,
-                'extension_seconds' => self::SNIPE_EXTENSION_SECONDS,
+                'bid_id'              => $bidId,
+                'amount'              => $amount,
+                'snipe_extended'      => $snipeExtended,
+                'new_end_time'        => $newEndTime,
+                'extension_seconds'   => self::SNIPE_EXTENSION_SECONDS,
+                'previous_bidder_id'  => $previousBidderId,
+                'previous_bid_amount' => $previousBidAmount,
             ];
         } catch (\Throwable $e) {
             $this->db->rollBack();

@@ -11,6 +11,7 @@ use App\Models\Rating;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\NotificationService;
+use App\Services\TwilioService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -23,7 +24,8 @@ final class AuctionController
         private readonly PDO $db,
         private readonly Twig $view,
         private readonly AuthService $auth,
-        private readonly FlashService $flash
+        private readonly FlashService $flash,
+        private readonly TwilioService $twilio
     ) {
     }
 
@@ -97,11 +99,21 @@ final class AuctionController
         }
 
         try {
-            (new Bid($this->db))->place($id, (int)$_SESSION['user_id'], (float)$auction['buy_now_price']);
-            (new NotificationService($this->db))->notifyWatchers($id, 'buyout', [
+            $userId = (int)$_SESSION['user_id'];
+            $result = (new Bid($this->db))->place($id, $userId, (float)$auction['buy_now_price']);
+
+            $notifs = new NotificationService($this->db, $this->twilio);
+            $notifs->notifyWatchers($id, 'buyout', [
                 'amount'   => (float)$auction['buy_now_price'],
-                'actor_id' => (int)$_SESSION['user_id'],
+                'actor_id' => $userId,
             ]);
+
+            // Buyout displaced the high bidder — text them so they know it's over.
+            $prevBidderId = $result['previous_bidder_id'] ?? null;
+            if ($prevBidderId !== null && $prevBidderId !== $userId) {
+                $notifs->notifyOutbid($id, $prevBidderId, (float)$result['amount']);
+            }
+
             $this->flash->success('Item secured at the buyout price — proceed to checkout.');
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());
@@ -137,11 +149,18 @@ final class AuctionController
             $result = (new Bid($this->db))->place($id, $userId, (float)$amount);
             $finalAmount = (float)$result['amount'];
 
-            $notifs = new NotificationService($this->db);
+            $notifs = new NotificationService($this->db, $this->twilio);
             $notifs->notifyWatchers($id, 'bid', [
                 'amount'   => $finalAmount,
                 'actor_id' => $userId,
             ]);
+
+            // Tell the previous high bidder they've been outbid (skip if
+            // it's the same user raising their own max bid).
+            $prevBidderId = $result['previous_bidder_id'] ?? null;
+            if ($prevBidderId !== null && $prevBidderId !== $userId) {
+                $notifs->notifyOutbid($id, $prevBidderId, $finalAmount);
+            }
 
             if ($result['snipe_extended']) {
                 $notifs->notifyBidders($id, 'snipe_extension', [
