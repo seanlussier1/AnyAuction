@@ -47,6 +47,10 @@ jobs:
           tags: |
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          # Bake the commit SHA into the image so /api/heartbeat can report
+          # it and the front-end update banner can detect deploys.
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           # GitHub-hosted layer cache makes follow-up builds way faster.
           cache-from: type=gha
           cache-to:   type=gha,mode=max

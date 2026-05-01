@@ -7,6 +7,7 @@ use App\Controllers\AuctionController;
 use App\Controllers\AuthController;
 use App\Controllers\BrowseController;
 use App\Controllers\CheckoutController;
+use App\Controllers\HeartbeatController;
 use App\Controllers\HomeController;
 use App\Controllers\ProfileController;
 use App\Controllers\PublicProfileController;
@@ -28,7 +29,8 @@ return function (App $app): void {
     $app->get('/checkout/cancel',       [CheckoutController::class, 'cancel']);
 
     $app->get('/browse',     [BrowseController::class, 'index']);
-    $app->get('/api/search', [SearchController::class, 'suggest']);
+    $app->get('/api/search',    [SearchController::class, 'suggest']);
+    $app->get('/api/heartbeat', [HeartbeatController::class, 'index']);
     $app->get('/sell',      [SellController::class, 'showForm']);
     $app->post('/sell',     [SellController::class, 'create']);
     $app->get('/watchlist',                 [WatchlistController::class, 'index']);

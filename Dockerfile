@@ -50,6 +50,12 @@ RUN composer install --no-dev --no-interaction --no-progress --optimize-autoload
 # App code (the .dockerignore keeps secrets, vendor, and dev junk out).
 COPY . .
 
+# Bake the git SHA into the image so the running app can serve its own
+# version on /api/heartbeat. The CI workflow passes GIT_SHA=${{ github.sha }}
+# at build time; defaults to "dev" for local builds.
+ARG GIT_SHA=dev
+RUN printf '%s' "$GIT_SHA" > /var/www/html/.version
+
 # Uploads dir must exist and be writable by the web user — the dev path
 # creates it lazily but the prod image bakes it in.
 RUN mkdir -p public/assets/uploads \

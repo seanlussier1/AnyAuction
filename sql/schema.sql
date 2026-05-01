@@ -4,6 +4,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS sessions;
 DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS watchlists;
@@ -131,6 +132,17 @@ CREATE TABLE ratings (
     CONSTRAINT chk_rating_score CHECK (score BETWEEN 1 AND 5),
     UNIQUE KEY uniq_order_rater (order_id, rater_id),
     INDEX idx_rating_ratee (ratee_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE sessions (
+    session_id    VARCHAR(128) PRIMARY KEY,
+    user_id       INT NULL,
+    payload       MEDIUMBLOB NOT NULL,
+    last_activity DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sessions_user_id       (user_id),
+    INDEX idx_sessions_last_activity (last_activity),
+    CONSTRAINT fk_sessions_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
