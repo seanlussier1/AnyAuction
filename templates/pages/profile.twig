@@ -112,7 +112,26 @@
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
                     {% for auction in sold %}
-                        <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
+                        <div class="col">
+                            {% include 'partials/auction_card.twig' with { auction: auction } only %}
+                            {% set so = sold_orders_by_item[auction.item_id] ?? null %}
+                            {% if so and so.status == 'paid' %}
+                                <div class="mt-2">
+                                    {% if rated_orders[so.order_id] %}
+                                        <span class="badge bg-success-subtle text-success-emphasis w-100 d-block py-1"><i class="bi bi-check-circle me-1"></i>Rated buyer</span>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-warning w-100" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#rate-seller-{{ so.order_id }}"
+                                                aria-expanded="false">
+                                            <i class="bi bi-star me-1"></i>Rate buyer ({{ so.buyer_first_name }})
+                                        </button>
+                                        <div class="collapse" id="rate-seller-{{ so.order_id }}">
+                                            {% include 'partials/rate_form.twig' with { order_id: so.order_id, label: 'Rate buyer', csrf: csrf } only %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -194,57 +213,60 @@
             {% else %}
                 <div class="d-flex flex-column gap-2">
                     {% for o in orders %}
-                        <a href="/auction/{{ o.item_id }}" class="d-flex align-items-center gap-3 p-3 rounded-lg-aa border text-decoration-none text-dark">
-                            {% if o.primary_image %}
-                                <img src="{{ o.primary_image }}" alt="" style="width: 56px; height: 56px; object-fit: cover; border-radius: 0.5rem; flex-shrink: 0;">
-                            {% else %}
-                                <span class="aa-brand-badge" style="width: 56px; height: 56px; flex-shrink: 0;"><i class="bi bi-image fs-4"></i></span>
-                            {% endif %}
-                            <div class="flex-grow-1 min-w-0">
-                                <div class="fw-medium text-truncate">{{ o.title }}</div>
-                                <div class="small text-muted-aa">Order #{{ o.order_id }} · {{ o.created_at|date('M j, Y') }}</div>
-                            </div>
-                            <div class="text-end flex-shrink-0">
-                                <div class="fw-medium">${{ o.amount|number_format(2) }}</div>
+                        <div class="p-3 rounded-lg-aa border">
+                            <div class="d-flex align-items-center gap-3">
+                                <a href="/auction/{{ o.item_id }}" class="flex-shrink-0">
+                                    {% if o.primary_image %}
+                                        <img src="{{ o.primary_image }}" alt="" style="width: 56px; height: 56px; object-fit: cover; border-radius: 0.5rem;">
+                                    {% else %}
+                                        <span class="aa-brand-badge d-inline-flex align-items-center justify-content-center" style="width: 56px; height: 56px;"><i class="bi bi-image fs-4"></i></span>
+                                    {% endif %}
+                                </a>
+                                <div class="flex-grow-1 min-w-0">
+                                    <a href="/auction/{{ o.item_id }}" class="text-decoration-none text-dark">
+                                        <div class="fw-medium text-truncate">{{ o.title }}</div>
+                                        <div class="small text-muted-aa">Order #{{ o.order_id }} · {{ o.created_at|date('M j, Y') }}</div>
+                                    </a>
+                                </div>
+                                <div class="text-end flex-shrink-0">
+                                    <div class="fw-medium">${{ o.amount|number_format(2) }}</div>
+                                    {% if o.status == 'paid' %}
+                                        <span class="badge bg-success-subtle text-success-emphasis">Paid</span>
+                                    {% elseif o.status == 'pending' %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis">Pending</span>
+                                    {% elseif o.status == 'cancelled' %}
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis">Cancelled</span>
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger-emphasis">{{ o.status|capitalize }}</span>
+                                    {% endif %}
+                                </div>
                                 {% if o.status == 'paid' %}
-                                    <span class="badge bg-success-subtle text-success-emphasis">Paid</span>
-                                {% elseif o.status == 'pending' %}
-                                    <span class="badge bg-warning-subtle text-warning-emphasis">Pending</span>
-                                {% elseif o.status == 'cancelled' %}
-                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">Cancelled</span>
-                                {% else %}
-                                    <span class="badge bg-danger-subtle text-danger-emphasis">{{ o.status|capitalize }}</span>
+                                    <div class="flex-shrink-0">
+                                        {% if rated_orders[o.order_id] %}
+                                            <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle me-1"></i>Rated</span>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-outline-warning" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#rate-buyer-{{ o.order_id }}"
+                                                    aria-expanded="false">
+                                                <i class="bi bi-star me-1"></i>Rate seller
+                                            </button>
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
                             </div>
-                        </a>
+                            {% if o.status == 'paid' and not rated_orders[o.order_id] %}
+                                <div class="collapse" id="rate-buyer-{{ o.order_id }}">
+                                    {% include 'partials/rate_form.twig' with { order_id: o.order_id, label: 'Rate seller', csrf: csrf } only %}
+                                </div>
+                            {% endif %}
+                        </div>
                     {% endfor %}
                 </div>
             {% endif %}
         </div>
 
         <div class="tab-pane fade" id="tab-reviews" role="tabpanel">
-            <div class="p-4 bg-warning-subtle rounded-lg-aa border border-warning-subtle mb-3 d-flex align-items-center gap-3">
-                <div class="text-center" style="width: 100px;">
-                    <div class="fs-3 text-warning-emphasis mb-1">{{ stats.rating }}</div>
-                    <div class="text-warning">
-                        {% for i in 1..5 %}<i class="bi bi-star{{ i <= 4 ? '-fill' : '' }}"></i>{% endfor %}
-                    </div>
-                    <div class="small text-muted-aa">{{ stats.reviews }} reviews</div>
-                </div>
-                <div class="flex-grow-1 small">
-                    {% for s in [5, 4, 3, 2, 1] %}
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <span style="width: 0.75rem;">{{ s }}</span>
-                            <i class="bi bi-star-fill text-warning" style="font-size: 0.7rem;"></i>
-                            <div class="progress flex-grow-1" style="height: 6px;">
-                                <div class="progress-bar bg-warning" style="width: 0%;"></div>
-                            </div>
-                            <span class="text-muted-aa" style="width: 1rem;">0</span>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-            <p class="text-center text-muted-aa py-3">No reviews yet.</p>
+            {% include 'partials/reviews_panel.twig' with { stats: stats, reviews: reviews } only %}
         </div>
 
         <div class="tab-pane fade" id="tab-notifications" role="tabpanel">

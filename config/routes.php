@@ -9,6 +9,8 @@ use App\Controllers\BrowseController;
 use App\Controllers\CheckoutController;
 use App\Controllers\HomeController;
 use App\Controllers\ProfileController;
+use App\Controllers\PublicProfileController;
+use App\Controllers\RatingController;
 use App\Controllers\SearchController;
 use App\Controllers\SellController;
 use App\Controllers\WatchlistController;
@@ -31,8 +33,10 @@ return function (App $app): void {
     $app->post('/sell',     [SellController::class, 'create']);
     $app->get('/watchlist',                 [WatchlistController::class, 'index']);
     $app->post('/watchlist/toggle/{id}',    [WatchlistController::class, 'toggle']);
-    $app->get('/profile',   [ProfileController::class, 'index']);
-    $app->get('/admin',     [AdminController::class, 'index']);
+    $app->get('/profile',          [ProfileController::class, 'index']);
+    $app->get('/users/{id}',       [PublicProfileController::class, 'show']);
+    $app->post('/rate/{orderId}',  [RatingController::class, 'submit']);
+    $app->get('/admin',            [AdminController::class, 'index']);
 
     $app->get('/register',  [AuthController::class, 'showRegister']);
     $app->post('/register', [AuthController::class, 'register']);

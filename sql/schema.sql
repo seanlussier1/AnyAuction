@@ -4,6 +4,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS watchlists;
 DROP TABLE IF EXISTS bids;
@@ -110,6 +111,26 @@ CREATE TABLE orders (
         FOREIGN KEY (buyer_id) REFERENCES users(user_id)         ON DELETE CASCADE,
     UNIQUE KEY uniq_stripe_session (stripe_session_id),
     INDEX idx_order_item_buyer (item_id, buyer_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE ratings (
+    rating_id     INT AUTO_INCREMENT PRIMARY KEY,
+    order_id      INT NOT NULL,
+    rater_id      INT NOT NULL,
+    ratee_id      INT NOT NULL,
+    direction     ENUM('buyer_to_seller','seller_to_buyer') NOT NULL,
+    score         TINYINT NOT NULL,
+    comment       VARCHAR(1000) NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rating_order
+        FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    CONSTRAINT fk_rating_rater
+        FOREIGN KEY (rater_id) REFERENCES users(user_id)   ON DELETE CASCADE,
+    CONSTRAINT fk_rating_ratee
+        FOREIGN KEY (ratee_id) REFERENCES users(user_id)   ON DELETE CASCADE,
+    CONSTRAINT chk_rating_score CHECK (score BETWEEN 1 AND 5),
+    UNIQUE KEY uniq_order_rater (order_id, rater_id),
+    INDEX idx_rating_ratee (ratee_id, created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

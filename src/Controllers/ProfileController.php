@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Models\Auction;
 use App\Models\Order;
+use App\Models\Rating;
 use App\Models\Watchlist;
 use App\Services\AuthService;
 use App\Services\FlashService;
@@ -40,7 +41,9 @@ final class ProfileController
         $sold        = $auctions->soldBySeller($userId);
         $won         = $auctions->wonBy($userId);
         $watchlist   = (new Watchlist($this->db))->forUser($userId);
-        $orders      = (new Order($this->db))->forBuyer($userId);
+        $orderModel  = new Order($this->db);
+        $orders      = $orderModel->forBuyer($userId);
+        $soldOrders  = $orderModel->forSeller($userId);
 
         // Items already in sold/won shouldn't double-up in the active tabs.
         $soldIds = array_column($sold, 'item_id');
@@ -55,24 +58,55 @@ final class ProfileController
             static fn ($b) => !in_array($b['item_id'], $wonIds, true)
         ));
 
+        $rating    = new Rating($this->db);
+        $statsData = $rating->statsForUser($userId);
+        $reviews   = $rating->reviewsForUser($userId);
+
+        $orderIds = array_merge(
+            array_map('intval', array_column($orders, 'order_id')),
+            array_map('intval', array_column($soldOrders, 'order_id'))
+        );
+        $ratedMap = $rating->ratedMap($orderIds, $userId);
+
+        // Indexed by item_id so the Sold-tab card grid can look up the
+        // matching order in O(1) without restructuring the existing layout.
+        $soldOrdersByItem = [];
+        foreach ($soldOrders as $row) {
+            $soldOrdersByItem[(int)$row['item_id']] = $row;
+        }
+
         $stats = [
-            'active_listings' => count($listings),
-            'total_listings'  => count($allListings),
-            'active_bids'     => count($bids),
-            'watchlist'       => count($watchlist),
-            'rating'          => '—',
-            'reviews'         => 0,
+            'active_listings'      => count($listings),
+            'total_listings'       => count($allListings),
+            'active_bids'          => count($bids),
+            'watchlist'            => count($watchlist),
+            'rating'               => $statsData['average'] !== null ? number_format($statsData['average'], 1) : '—',
+            'reviews'              => $statsData['count'],
+            'rating_average_round' => $statsData['average'] !== null ? (int)round($statsData['average']) : 0,
+            'rating_distribution'  => $statsData['distribution'],
         ];
 
         return $this->view->render($response, 'pages/profile.twig', [
-            'user'      => $user,
-            'listings'  => $listings,
-            'sold'      => $sold,
-            'bids'      => $bids,
-            'won'       => $won,
-            'watchlist' => $watchlist,
-            'orders'    => $orders,
-            'stats'     => $stats,
+            'user'                => $user,
+            'listings'            => $listings,
+            'sold'                => $sold,
+            'bids'                => $bids,
+            'won'                 => $won,
+            'watchlist'           => $watchlist,
+            'orders'              => $orders,
+            'reviews'             => $reviews,
+            'rated_orders'        => $ratedMap,
+            'sold_orders_by_item' => $soldOrdersByItem,
+            'csrf'                => $this->ensureCsrfToken(),
+            'stats'               => $stats,
         ]);
+    }
+
+    private function ensureCsrfToken(): string
+    {
+        if (empty($_SESSION['_csrf'])) {
+            $_SESSION['_csrf'] = bin2hex(random_bytes(16));
+        }
+        return $_SESSION['_csrf'];
     }
 }

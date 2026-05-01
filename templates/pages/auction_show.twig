@@ -229,10 +229,18 @@
                 {% if auction.seller_profile_picture %}
                     <img src="{{ auction.seller_profile_picture }}" class="rounded-circle" width="48" height="48" alt="">
                 {% else %}
-                    <span class="aa-brand-badge" style="width: 48px; height: 48px;"><i class="bi bi-person fs-5"></i></span>
+                    <span class="aa-brand-badge d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px;"><i class="bi bi-person fs-5"></i></span>
                 {% endif %}
                 <div>
-                    <div>{{ auction.seller_first_name }} {{ auction.seller_last_name }}</div>
+                    <div>
+                        <a href="/users/{{ auction.seller_id }}" class="text-decoration-none text-dark">{{ auction.seller_first_name }} {{ auction.seller_last_name }}</a>
+                        {% if seller_stats.count > 0 %}
+                            <span class="text-warning small ms-1">
+                                <i class="bi bi-star-fill"></i> {{ seller_stats.average|number_format(1) }}
+                                <span class="text-muted-aa">({{ seller_stats.count }})</span>
+                            </span>
+                        {% endif %}
+                    </div>
                     <div class="small text-muted-aa">@{{ auction.seller_username }} — member since {{ auction.seller_created_at|date('M Y') }}</div>
                 </div>
             </div>

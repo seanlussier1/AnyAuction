@@ -90,6 +90,34 @@ final class Order
     }
 
     /**
+     * Seller's order history with the joined buyer + item details. Used by
+     * the "Sold" tab so the rate-buyer button has a real order_id to point at.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function forSeller(int $sellerId): array
+    {
+        $stmt = $this->db->prepare('
+            SELECT o.order_id, o.item_id, o.buyer_id, o.amount, o.status,
+                   o.created_at, o.paid_at,
+                   a.title,
+                   u.username   AS buyer_username,
+                   u.first_name AS buyer_first_name,
+                   u.last_name  AS buyer_last_name,
+                   (SELECT image_url FROM item_images
+                      WHERE item_id = a.item_id
+                      ORDER BY is_primary DESC, display_order ASC
+                      LIMIT 1) AS primary_image
+            FROM orders o
+            JOIN auction_items a ON a.item_id = o.item_id
+            JOIN users         u ON u.user_id = o.buyer_id
+            WHERE a.seller_id = :seller
+            ORDER BY o.created_at DESC');
+        $stmt->execute(['seller' => $sellerId]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Has this item already been paid for? Used to gate the checkout-start
      * action so the same auction can't be charged twice.
      */

@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Models\Auction;
 use App\Models\Order;
+use App\Models\Rating;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\StripeService;
@@ -145,6 +146,17 @@ final class CheckoutController
             $this->flash->success('Payment confirmed — thanks for your purchase!');
         }
 
+        $alreadyRated = false;
+        if ($order['status'] === 'paid' && $this->auth->isLoggedIn()) {
+            $alreadyRated = (new Rating($this->db))->existsForOrderAndRater(
+                (int)$order['order_id'],
+                (int)$_SESSION['user_id']
+            );
+        }
+        if (empty($_SESSION['_csrf'])) {
+            $_SESSION['_csrf'] = bin2hex(random_bytes(16));
+        }
+
         return $this->view->render($response, 'pages/checkout_result.twig', [
             'state'   => $session->payment_status === 'paid' ? 'paid' : 'pending',
             'order'   => $order,
@@ -152,6 +164,8 @@ final class CheckoutController
                 'id'             => $session->id,
                 'payment_status' => $session->payment_status,
             ],
+            'already_rated' => $alreadyRated,
+            'csrf'          => $_SESSION['_csrf'],
         ]);
     }
 

@@ -1,0 +1,21 @@
+{# Inline rating form. Expects { order_id, label, csrf } in scope. #}
+<form action="/rate/{{ order_id }}" method="post" class="border rounded-lg-aa p-3 mt-2 bg-surface-aa">
+    <input type="hidden" name="_csrf" value="{{ csrf }}">
+    <div class="mb-2">
+        <label class="form-label small mb-1">{{ label }} — score</label>
+        <div class="d-flex gap-2 flex-wrap">
+            {% for s in 1..5 %}
+                <label class="d-inline-flex align-items-center gap-1 small">
+                    <input type="radio" name="score" value="{{ s }}" required {{ s == 5 ? 'checked' : '' }}>
+                    {{ s }} <i class="bi bi-star-fill text-warning" style="font-size:.7rem;"></i>
+                </label>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="mb-2">
+        <label class="form-label small mb-1">Comment <span class="text-muted-aa">(optional)</span></label>
+        <textarea name="comment" rows="2" maxlength="1000" class="form-control form-control-sm"
+                  placeholder="How was the experience?"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Submit rating</button>
+</form>

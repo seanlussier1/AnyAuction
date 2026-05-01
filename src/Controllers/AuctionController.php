@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Models\Auction;
 use App\Models\Bid;
 use App\Models\Order;
+use App\Models\Rating;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\NotificationService;
@@ -56,6 +57,8 @@ final class AuctionController
             }
         }
 
+        $sellerStats = (new Rating($this->db))->statsForUser((int)$auction['seller_id']);
+
         return $this->view->render($response, 'pages/auction_show.twig', [
             'auction'       => $auction,
             'images'        => $images,
@@ -64,6 +67,7 @@ final class AuctionController
             'csrf'          => $this->ensureCsrfToken(),
             'order_paid'    => $orderPaid,
             'order_paid_at' => $orderPaidAt,
+            'seller_stats'  => $sellerStats,
         ]);
     }
 

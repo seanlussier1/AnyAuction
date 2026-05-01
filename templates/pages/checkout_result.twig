@@ -32,6 +32,15 @@
                 {% endif %}
             </div>
 
+            {% if not already_rated %}
+                <div class="mt-4">
+                    <h2 class="h6 mb-2">Leave a rating for the seller</h2>
+                    {% include 'partials/rate_form.twig' with { order_id: order.order_id, label: 'Rate seller', csrf: csrf } only %}
+                </div>
+            {% else %}
+                <p class="small text-success mt-3 mb-0"><i class="bi bi-check-circle me-1"></i>Thanks — you've already rated this seller.</p>
+            {% endif %}
+
             <div class="d-flex gap-2 mt-4">
                 <a href="/auction/{{ order.item_id }}" class="btn btn-outline-secondary flex-fill">View item</a>
                 <a href="/profile" class="btn btn-primary flex-fill">My orders</a>
