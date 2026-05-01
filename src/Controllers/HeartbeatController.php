@@ -4,23 +4,40 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AuctionExpiryService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Throwable;
 
 /**
  * GET /api/heartbeat → JSON snapshot the front-end can poll to detect
  * deploys and listing changes. Cheap (~1 query, <1ms). Cached aggressively
  * by the client so the banner only flips when something actually moved.
+ *
+ * Doubles as a low-budget auction-expiry sweeper: every heartbeat tick
+ * checks for time-expired auctions, marks them closed, and texts the
+ * winner. The check is a single indexed SELECT when nothing's expired,
+ * so the additional load is negligible. As long as the site has any
+ * tab open polling, expiries are processed within ~60s of end_time.
  */
 final class HeartbeatController
 {
-    public function __construct(private readonly PDO $db)
-    {
+    public function __construct(
+        private readonly PDO $db,
+        private readonly AuctionExpiryService $expiry
+    ) {
     }
 
     public function index(Request $request, Response $response): Response
     {
+        // Best-effort sweep — never let it 500 the heartbeat itself.
+        try {
+            $this->expiry->processExpired();
+        } catch (Throwable $e) {
+            error_log('[HeartbeatController] expiry sweep failed: ' . $e->getMessage());
+        }
+
         $payload = [
             'version'           => $this->appVersion(),
             'listings_changed'  => $this->listingsTimestamp(),

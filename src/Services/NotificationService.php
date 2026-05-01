@@ -201,4 +201,56 @@ final class NotificationService
 
         $this->twilio->sendSms($phone, $body);
     }
+
+    /**
+     * Tell the winning bidder that a time-expired auction closed in their
+     * favour. Fired by AuctionExpiryService on the periodic sweep, so this
+     * is a one-shot terminal message — no conversation row, no follow-up
+     * SMS bidding (the auction is over).
+     *
+     * Caller is responsible for not invoking on buyout-closed auctions
+     * (those flowed through the checkout path and don't need a re-notify).
+     */
+    public function notifyAuctionWon(int $winnerId, int $itemId, float $winningBid): void
+    {
+        $userStmt = $this->db->prepare(
+            'SELECT phone, phone_verified_at, sms_opt_out
+             FROM users
+             WHERE user_id = :id'
+        );
+        $userStmt->execute(['id' => $winnerId]);
+        $user = $userStmt->fetch();
+        if (!$user) {
+            return;
+        }
+
+        $phone = (string)($user['phone'] ?? '');
+        if ($phone === '' || $user['phone_verified_at'] === null) {
+            return;
+        }
+        if ((int)$user['sms_opt_out'] === 1) {
+            return;
+        }
+
+        $titleStmt = $this->db->prepare(
+            'SELECT title FROM auction_items WHERE item_id = :id'
+        );
+        $titleStmt->execute(['id' => $itemId]);
+        $title = (string)$titleStmt->fetchColumn();
+        if ($title === '') {
+            return;
+        }
+
+        // Clear any stale waiting_* conversation row for this phone so the
+        // closed auction can't accidentally match a future text reply.
+        (new \App\Models\SmsConversation($this->db))->delete($phone);
+
+        $body = sprintf(
+            "AnyAuction: you won '%s' at $%s! Check your profile for next steps. Reply STOP to opt out.",
+            $title,
+            number_format($winningBid, 2)
+        );
+
+        $this->twilio->sendSms($phone, $body);
+    }
 }
