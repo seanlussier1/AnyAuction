@@ -110,7 +110,7 @@
                     <p>No sold items yet. Sales will appear here once a buyer hits your buyout.</p>
                 </div>
             {% else %}
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 align-items-start">
                     {% for auction in sold %}
                         <div class="col">
                             {% include 'partials/auction_card.twig' with { auction: auction } only %}
@@ -167,7 +167,7 @@
                     <a href="/browse" class="text-decoration-none">Browse auctions</a>
                 </div>
             {% else %}
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 align-items-start">
                     {% for auction in won %}
                         <div class="col">
                             {% include 'partials/auction_card.twig' with { auction: auction } only %}
