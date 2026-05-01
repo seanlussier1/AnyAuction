@@ -1,19 +1,28 @@
 // Polls /api/heartbeat to detect new deploys and listing activity.
-// Shows a non-intrusive banner — never force-refreshes mid-action.
+// Shows a non-intrusive banner — never force-refreshes mid-action. Banner
+// state is held in sessionStorage so it survives client-side navigation.
+//
+// Self-clearing rules:
+//   - Version banner clears when the navigated-to page's meta app-version
+//     matches the version that was being advertised. That means the
+//     navigation effectively was the refresh.
+//   - Listings banner clears when the user lands on a listings page
+//     (`/`, `/browse`) — a fresh page load there shows the latest items,
+//     so the "new activity" notice has been consumed.
 (() => {
     const meta = document.querySelector('meta[name="app-version"]');
-    const initialVersion = meta?.getAttribute('content') || 'dev';
+    const pageVersion = meta?.getAttribute('content') || 'dev';
 
-    // Pages where new listings/bids are visible — nudge user to refresh
-    // when they change. Other pages only watch the deploy version.
     const listingsPages = ['/', '/browse'];
-    const watchListings = listingsPages.includes(location.pathname);
+    const onListingsPage = listingsPages.includes(location.pathname);
+
+    const VERSION_KEY  = 'aa_hb_version_pending';
+    const LISTINGS_KEY = 'aa_hb_listings_pending';
+    const POLL_MS      = 60_000;
 
     let initialListings = null;
     let banner = null;
     let pollHandle = null;
-
-    const POLL_MS = 60_000;
 
     const buildBanner = (text, refreshLabel = 'Refresh') => {
         if (banner) return banner;
@@ -38,8 +47,20 @@
             <button type="button" class="aa-hb-close" aria-label="Dismiss"
                     style="background:transparent;color:#fff;border:0;font-size:1.25rem;line-height:1;cursor:pointer;opacity:.7;">×</button>
         `;
-        banner.querySelector('.aa-hb-refresh').addEventListener('click', () => location.reload());
-        banner.querySelector('.aa-hb-close').addEventListener('click', () => banner?.remove());
+        banner.querySelector('.aa-hb-refresh').addEventListener('click', () => {
+            // Refresh acts on whichever banner is showing — wipe both keys
+            // so the reload doesn't immediately re-render the banner if
+            // the new HTML is already up-to-date.
+            sessionStorage.removeItem(VERSION_KEY);
+            sessionStorage.removeItem(LISTINGS_KEY);
+            location.reload();
+        });
+        banner.querySelector('.aa-hb-close').addEventListener('click', () => {
+            sessionStorage.removeItem(VERSION_KEY);
+            sessionStorage.removeItem(LISTINGS_KEY);
+            banner?.remove();
+            banner = null;
+        });
         document.body.appendChild(banner);
         return banner;
     };
@@ -50,6 +71,34 @@
         if (slot.textContent !== text) slot.textContent = text;
     };
 
+    // === On every page load, replay any pending notification from session
+    // storage so the banner survives navigation. Self-clear when the new
+    // page makes the banner irrelevant.
+    const pendingVersion  = sessionStorage.getItem(VERSION_KEY);
+    const pendingListings = sessionStorage.getItem(LISTINGS_KEY);
+
+    if (pendingVersion) {
+        if (pendingVersion === pageVersion) {
+            // The page we just loaded *is* the advertised version — the
+            // navigation served as the refresh.
+            sessionStorage.removeItem(VERSION_KEY);
+        } else {
+            showBanner('A new version of AnyAuction is available.', 'Refresh');
+        }
+    }
+
+    if (pendingListings && !pendingVersion) {
+        // Version banner takes priority (it implies a hard refresh anyway),
+        // so only render the listings banner when there's no version one.
+        if (onListingsPage) {
+            // Fresh /browse or / load — the listings update has been
+            // consumed by reloading.
+            sessionStorage.removeItem(LISTINGS_KEY);
+        } else {
+            showBanner('New listings or bids since you opened the site.', 'Refresh');
+        }
+    }
+
     const tick = async () => {
         try {
             const res = await fetch('/api/heartbeat', {
@@ -59,34 +108,35 @@
             if (!res.ok) return;
             const data = await res.json();
 
-            // Capture the listings baseline on the first successful poll
-            // so we don't show a "new listings" banner just for the values
-            // already on screen.
             if (initialListings === null) {
                 initialListings = data.listings_changed ?? 0;
             }
 
-            const versionChanged = data.version && data.version !== initialVersion;
-            const listingsChanged = watchListings
-                && data.listings_changed
+            const versionChanged = data.version && data.version !== pageVersion;
+            const listingsChanged = data.listings_changed
                 && data.listings_changed > initialListings;
 
-            // Deploy banner takes priority — it implies a hard refresh anyway.
+            // Version banner takes priority — once tripped we stop polling.
             if (versionChanged) {
+                sessionStorage.setItem(VERSION_KEY, data.version);
                 showBanner('A new version of AnyAuction is available.', 'Refresh');
-                clearInterval(pollHandle);
+                stop();
                 return;
             }
             if (listingsChanged) {
-                showBanner('New listings or bids since you opened this page.', 'Refresh');
+                sessionStorage.setItem(LISTINGS_KEY, String(data.listings_changed));
+                if (onListingsPage || !banner) {
+                    // On a listings page → user can immediately benefit
+                    // from refreshing. Off listings → still surface so
+                    // they know to head back.
+                    showBanner('New listings or bids since you opened this page.', 'Refresh');
+                }
             }
         } catch {
             // Network blip — try again on the next tick.
         }
     };
 
-    // Don't fire on tabs the user isn't looking at — saves battery and
-    // server load. Resume immediately when the tab comes back to focus.
     const start = () => {
         if (pollHandle) return;
         tick();
@@ -98,6 +148,8 @@
         pollHandle = null;
     };
 
+    // Skip polling on hidden tabs to save battery + server load. Resume on
+    // focus so a banner can fire promptly when the user comes back.
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) stop(); else start();
     });
