@@ -33,6 +33,21 @@ final class NotificationController
         return $this->json($response, ['marked' => $count]);
     }
 
+    /**
+     * Returns notifications newer than ?since=<id> for the logged-in user,
+     * newest first. Used by the live-update poller in heartbeat.js to
+     * prepend rows to the Notifications tab without a page reload.
+     */
+    public function recent(Request $request, Response $response): Response
+    {
+        if (!$this->auth->isLoggedIn()) {
+            return $this->json($response->withStatus(401), ['error' => 'login_required']);
+        }
+        $since = (int)($request->getQueryParams()['since'] ?? 0);
+        $rows  = (new Notification($this->db))->sinceForUser((int)$_SESSION['user_id'], $since);
+        return $this->json($response, ['notifications' => $rows]);
+    }
+
     private function json(Response $response, array $payload): Response
     {
         $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));

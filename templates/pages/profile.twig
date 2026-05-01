@@ -315,7 +315,7 @@
                         {% elseif n.type == 'welcome' %}{% set icon = 'bi-stars' %}{% set tone = 'warning' %}
                         {% elseif n.type starts with 'watchlist_' %}{% set icon = 'bi-heart' %}{% set tone = 'danger' %}
                         {% endif %}
-                        <a href="{{ n.href|default('#') }}" class="d-flex align-items-start gap-3 p-3 rounded-lg-aa border text-decoration-none text-dark {% if n.is_read == 0 %}bg-warning-subtle{% endif %}">
+                        <a href="{{ n.href|default('#') }}" data-aa-notif-id="{{ n.notification_id }}" class="d-flex align-items-start gap-3 p-3 rounded-lg-aa border text-decoration-none text-dark {% if n.is_read == 0 %}bg-warning-subtle{% endif %}">
                             <span class="aa-brand-badge bg-{{ tone }}-subtle text-{{ tone }}-emphasis d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
                                 <i class="bi {{ icon }} fs-5"></i>
                             </span>
@@ -385,11 +385,34 @@
     </div>
 </div>
 
-{# Mark notifications read the moment the Notifications tab is shown.
-   Hides the bell badge in the navbar + the tab-label badge so the unread
-   count visually clears in step with the server-side flag flip. #}
+{#
+   Two scripts on this page:
+     1. activateTabFromHash — when /profile#tab-notifications is loaded
+        (e.g. via the bell icon in the navbar), open that tab instead of
+        the default "My listings". Also responds to in-page hash changes.
+     2. mark-read on shown.bs.tab — clears server-side unread + the
+        navbar/tab badges as soon as the user actually views the tab.
+#}
 <script>
-    (function () {
+    // Defer until Bootstrap (loaded at the bottom of layout.twig) is ready.
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Hash → tab activation. Map an exact hash like "#tab-notifications"
+        //    to the tab button that targets that pane. Bootstrap's Tab API
+        //    handles the visual swap.
+        var activateTabFromHash = function () {
+            var hash = window.location.hash || '';
+            if (hash.length < 2) return;
+            var trigger = document.querySelector('[data-bs-toggle="tab"][data-bs-target="' + hash + '"]');
+            if (trigger && window.bootstrap && window.bootstrap.Tab) {
+                window.bootstrap.Tab.getOrCreateInstance(trigger).show();
+            }
+        };
+        activateTabFromHash();
+        window.addEventListener('hashchange', activateTabFromHash);
+
+        // 2. Mark-as-read when the Notifications tab is shown. Sweeps the
+        //    navbar bell badge + the tab-label badge so the unread count
+        //    visually clears in step with the server.
         var trigger = document.getElementById('aa-notifs-tab');
         if (!trigger) return;
         trigger.addEventListener('shown.bs.tab', function () {
@@ -402,8 +425,14 @@
                 document.querySelectorAll('.aa-bell-badge, #aa-notifs-tab .badge').forEach(function (el) {
                     el.remove();
                 });
+                // Drop the unread highlight from the rendered list too.
+                document.querySelectorAll('#tab-notifications .bg-warning-subtle').forEach(function (row) {
+                    row.classList.remove('bg-warning-subtle');
+                    var newPill = row.querySelector('.badge.bg-warning.text-dark');
+                    if (newPill) newPill.remove();
+                });
             }).catch(function () { /* silent */ });
         });
-    })();
+    });
 </script>
 {% endblock %}

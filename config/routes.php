@@ -37,6 +37,7 @@ return function (App $app): void {
     $app->get('/api/search',    [SearchController::class, 'suggest']);
     $app->get('/api/heartbeat', [HeartbeatController::class, 'index']);
     $app->post('/api/notifications/mark-read', [NotificationController::class, 'markAllRead']);
+    $app->get('/api/notifications/recent',     [NotificationController::class, 'recent']);
     $app->get('/sell',      [SellController::class, 'showForm']);
     $app->post('/sell',     [SellController::class, 'create']);
     $app->get('/watchlist',                 [WatchlistController::class, 'index']);

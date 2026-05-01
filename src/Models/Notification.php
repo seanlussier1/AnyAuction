@@ -44,6 +44,31 @@ final class Notification
     }
 
     /**
+     * Return only notifications newer than $sinceId. Used by the live-update
+     * poller to fetch deltas instead of re-rendering the whole list.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function sinceForUser(int $userId, int $sinceId, int $limit = 50): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT n.notification_id, n.type, n.title, n.body, n.item_id, n.href,
+                    n.is_read, n.created_at,
+                    a.title AS item_title
+             FROM notifications n
+             LEFT JOIN auction_items a ON a.item_id = n.item_id
+             WHERE n.user_id = :uid AND n.notification_id > :since
+             ORDER BY n.created_at DESC, n.notification_id DESC
+             LIMIT :lim'
+        );
+        $stmt->bindValue('uid', $userId, PDO::PARAM_INT);
+        $stmt->bindValue('since', $sinceId, PDO::PARAM_INT);
+        $stmt->bindValue('lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function forUser(int $userId, int $limit = 50): array

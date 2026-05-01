@@ -23,6 +23,19 @@
     let initialListings = null;
     let banner = null;
     let pollHandle = null;
+    // Track the highest notification id we've already rendered so the
+    // poller can request only the delta on subsequent ticks. Seeded from
+    // the server-rendered list on page load (data-attribute set by the
+    // Notifications tab pane when it has rows).
+    let lastSeenNotifId = (() => {
+        const list = document.querySelectorAll('#tab-notifications [data-aa-notif-id]');
+        let max = 0;
+        list.forEach((el) => {
+            const id = parseInt(el.getAttribute('data-aa-notif-id') || '0', 10);
+            if (id > max) max = id;
+        });
+        return max;
+    })();
 
     const buildBanner = (text, refreshLabel = 'Refresh') => {
         if (banner) return banner;
@@ -132,6 +145,137 @@
                     showBanner('New listings or bids since you opened this page.', 'Refresh');
                 }
             }
+
+            // Live notification updates — bell badge + (when on the
+            // notifications tab) prepend any new rows.
+            applyUnreadCount(data.unread_notifications ?? 0);
+            const latestId = data.latest_notification_id ?? 0;
+            if (latestId > lastSeenNotifId) {
+                await fetchAndPrependNotifications();
+            }
+        } catch {
+            // Network blip — try again on the next tick.
+        }
+    };
+
+    const applyUnreadCount = (count) => {
+        // Navbar bell pill
+        const bell = document.querySelector('a[aria-label="Notifications"]');
+        if (bell) {
+            let pill = bell.querySelector('.aa-bell-badge');
+            if (count > 0) {
+                if (!pill) {
+                    pill = document.createElement('span');
+                    pill.className = 'aa-bell-badge position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark';
+                    pill.style.cssText = 'font-size: 0.65rem; padding: 0.25rem 0.4rem;';
+                    bell.appendChild(pill);
+                }
+                pill.textContent = count > 9 ? '9+' : String(count);
+            } else if (pill) {
+                pill.remove();
+            }
+        }
+        // Profile-tab label badge
+        const tabBtn = document.getElementById('aa-notifs-tab');
+        if (tabBtn) {
+            let badge = tabBtn.querySelector('.badge');
+            if (count > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'badge bg-warning text-dark ms-1';
+                    tabBtn.appendChild(badge);
+                }
+                badge.textContent = String(count);
+            } else if (badge) {
+                badge.remove();
+            }
+        }
+    };
+
+    const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+
+    const iconForType = (type) => {
+        const t = String(type || '');
+        if (t === 'outbid')          return { icon: 'bi-arrow-up-circle',     tone: 'warning'   };
+        if (t === 'auction_won')     return { icon: 'bi-trophy-fill',         tone: 'success'   };
+        if (t === 'auction_lost')   return { icon: 'bi-x-circle',             tone: 'secondary' };
+        if (t === 'snipe_extended') return { icon: 'bi-stopwatch',            tone: 'info'      };
+        if (t === 'bid_received')   return { icon: 'bi-cash-coin',            tone: 'info'      };
+        if (t === 'item_sold')      return { icon: 'bi-check-circle-fill',    tone: 'success'   };
+        if (t === 'order_paid')     return { icon: 'bi-credit-card-2-front', tone: 'success'   };
+        if (t === 'welcome')         return { icon: 'bi-stars',                tone: 'warning'   };
+        if (t.indexOf('watchlist_') === 0) return { icon: 'bi-heart',         tone: 'danger'    };
+        return { icon: 'bi-bell', tone: 'secondary' };
+    };
+
+    const renderNotificationRow = (n) => {
+        const { icon, tone } = iconForType(n.type);
+        const href = n.href || '#';
+        const created = n.created_at
+            ? new Date(n.created_at.replace(' ', 'T') + 'Z').toLocaleString()
+            : '';
+        const newPill = n.is_read == 0 ? '<span class="badge bg-warning text-dark">New</span>' : '';
+        const bodyHtml = n.body ? `<div class="small text-muted-aa">${escapeHtml(n.body)}</div>` : '';
+        const wrapClass = 'd-flex align-items-start gap-3 p-3 rounded-lg-aa border text-decoration-none text-dark'
+            + (n.is_read == 0 ? ' bg-warning-subtle' : '');
+        return `
+            <a href="${escapeHtml(href)}" data-aa-notif-id="${parseInt(n.notification_id, 10)}" class="${wrapClass}">
+                <span class="aa-brand-badge bg-${tone}-subtle text-${tone}-emphasis d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                    <i class="bi ${icon} fs-5"></i>
+                </span>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="fw-medium">${escapeHtml(n.title)}</div>
+                        ${newPill}
+                    </div>
+                    ${bodyHtml}
+                    <div class="small text-muted-aa opacity-75">${escapeHtml(created)}</div>
+                </div>
+            </a>
+        `;
+    };
+
+    const fetchAndPrependNotifications = async () => {
+        try {
+            const res = await fetch(`/api/notifications/recent?since=${lastSeenNotifId}`, {
+                cache: 'no-store',
+                credentials: 'same-origin',
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            const fresh = (data.notifications || []).filter(
+                (n) => parseInt(n.notification_id, 10) > lastSeenNotifId
+            );
+            if (fresh.length === 0) return;
+
+            // Update the high-water mark so the next tick is a true delta.
+            fresh.forEach((n) => {
+                const id = parseInt(n.notification_id, 10);
+                if (id > lastSeenNotifId) lastSeenNotifId = id;
+            });
+
+            // Find or build the list container inside the Notifications tab.
+            const tab = document.querySelector('#tab-notifications');
+            if (!tab) return;
+
+            let list = tab.querySelector('.d-flex.flex-column.gap-2');
+            if (!list) {
+                // Empty-state was rendered server-side — replace it with a list.
+                tab.querySelectorAll('.text-center.py-5.text-muted-aa').forEach((el) => el.remove());
+                list = document.createElement('div');
+                list.className = 'd-flex flex-column gap-2';
+                tab.appendChild(list);
+            }
+
+            // Newest at the top — fresh comes back DESC, so prepend in order.
+            fresh.forEach((n) => {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = renderNotificationRow(n).trim();
+                const node = wrapper.firstElementChild;
+                if (node) list.insertBefore(node, list.firstChild);
+            });
         } catch {
             // Network blip — try again on the next tick.
         }

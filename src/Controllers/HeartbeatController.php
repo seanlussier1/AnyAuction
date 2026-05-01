@@ -42,7 +42,25 @@ final class HeartbeatController
             'version'           => $this->appVersion(),
             'listings_changed'  => $this->listingsTimestamp(),
             'server_time'       => time(),
+            'unread_notifications'    => 0,
+            'latest_notification_id'  => 0,
         ];
+
+        // Per-user notification snapshot for the live bell badge.
+        if (!empty($_SESSION['user_id'])) {
+            $stmt = $this->db->prepare(
+                'SELECT
+                    COALESCE(SUM(is_read = 0), 0) AS unread,
+                    COALESCE(MAX(notification_id), 0) AS latest
+                 FROM notifications WHERE user_id = :uid'
+            );
+            $stmt->execute(['uid' => (int)$_SESSION['user_id']]);
+            $row = $stmt->fetch();
+            if ($row) {
+                $payload['unread_notifications']   = (int)$row['unread'];
+                $payload['latest_notification_id'] = (int)$row['latest'];
+            }
+        }
 
         $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
         return $response
