@@ -64,7 +64,8 @@ final class Bid
      *   new_end_time: ?string,
      *   extension_seconds: int,
      *   previous_bidder_id: ?int,
-     *   previous_bid_amount: ?float
+     *   previous_bid_amount: ?float,
+     *   bought_out: bool
      * }
      */
     public function place(int $itemId, int $userId, float $amount): array
@@ -181,6 +182,7 @@ final class Bid
                 'extension_seconds'   => self::SNIPE_EXTENSION_SECONDS,
                 'previous_bidder_id'  => $previousBidderId,
                 'previous_bid_amount' => $previousBidAmount,
+                'bought_out'          => $boughtOut,
             ];
         } catch (\Throwable $e) {
             $this->db->rollBack();

@@ -254,7 +254,11 @@ final class TwilioWebhookController
 
         $prevBidderId = $result['previous_bidder_id'] ?? null;
         if ($prevBidderId !== null && $prevBidderId !== $userId) {
-            $notifs->notifyOutbid($itemId, $prevBidderId, (float)$result['amount']);
+            if (!empty($result['bought_out'])) {
+                $notifs->notifyAuctionLost($itemId, $prevBidderId, (float)$result['amount']);
+            } else {
+                $notifs->notifyOutbid($itemId, $prevBidderId, (float)$result['amount']);
+            }
         }
 
         if (!empty($result['snipe_extended'])) {

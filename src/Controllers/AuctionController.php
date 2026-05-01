@@ -108,10 +108,11 @@ final class AuctionController
                 'actor_id' => $userId,
             ]);
 
-            // Buyout displaced the high bidder — text them so they know it's over.
+            // Buyout displaced the high bidder — they can't counter-bid (auction
+            // is sold) so send the auction-lost message, not the rebid prompt.
             $prevBidderId = $result['previous_bidder_id'] ?? null;
             if ($prevBidderId !== null && $prevBidderId !== $userId) {
-                $notifs->notifyOutbid($id, $prevBidderId, (float)$result['amount']);
+                $notifs->notifyAuctionLost($id, $prevBidderId, (float)$result['amount']);
             }
 
             $this->flash->success('Item secured at the buyout price — proceed to checkout.');
@@ -155,11 +156,16 @@ final class AuctionController
                 'actor_id' => $userId,
             ]);
 
-            // Tell the previous high bidder they've been outbid (skip if
-            // it's the same user raising their own max bid).
+            // Tell the previous high bidder. If the bid hit the buyout the
+            // auction is now sold and they can't reply with a counter-bid,
+            // so use the auction-lost message instead.
             $prevBidderId = $result['previous_bidder_id'] ?? null;
             if ($prevBidderId !== null && $prevBidderId !== $userId) {
-                $notifs->notifyOutbid($id, $prevBidderId, $finalAmount);
+                if (!empty($result['bought_out'])) {
+                    $notifs->notifyAuctionLost($id, $prevBidderId, $finalAmount);
+                } else {
+                    $notifs->notifyOutbid($id, $prevBidderId, $finalAmount);
+                }
             }
 
             if ($result['snipe_extended']) {

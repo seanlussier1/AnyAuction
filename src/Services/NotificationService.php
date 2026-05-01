@@ -147,4 +147,58 @@ final class NotificationService
 
         $this->twilio->sendSms($phone, $body);
     }
+
+    /**
+     * Tell the displaced high bidder that the auction was bought out — game
+     * over, no follow-up bid possible. Like notifyOutbid but does NOT open
+     * an `sms_conversations` row (there's nothing to reply to) and uses a
+     * "sold" message instead of the "rebid" prompt.
+     *
+     * Caller is responsible for not invoking when the displaced bidder
+     * matches the buyer (raising your own max bid into the buyout).
+     */
+    public function notifyAuctionLost(int $itemId, int $previousBidderId, float $finalAmount): void
+    {
+        $userStmt = $this->db->prepare(
+            'SELECT phone, phone_verified_at, sms_opt_out
+             FROM users
+             WHERE user_id = :id'
+        );
+        $userStmt->execute(['id' => $previousBidderId]);
+        $user = $userStmt->fetch();
+        if (!$user) {
+            return;
+        }
+
+        $phone = (string)($user['phone'] ?? '');
+        if ($phone === '' || $user['phone_verified_at'] === null) {
+            return;
+        }
+        if ((int)$user['sms_opt_out'] === 1) {
+            return;
+        }
+
+        $titleStmt = $this->db->prepare(
+            'SELECT title FROM auction_items WHERE item_id = :id'
+        );
+        $titleStmt->execute(['id' => $itemId]);
+        $title = (string)$titleStmt->fetchColumn();
+        if ($title === '') {
+            return;
+        }
+
+        // No conversation row — auction is sold, no further bidding possible.
+        // If a stale waiting_* row exists for this phone (from an earlier
+        // outbid), clear it so a future text doesn't try to bid on this
+        // closed auction.
+        (new \App\Models\SmsConversation($this->db))->delete($phone);
+
+        $body = sprintf(
+            "AnyAuction: '%s' was bought out for $%s. The auction is closed — better luck next time! Reply STOP to opt out.",
+            $title,
+            number_format($finalAmount, 2)
+        );
+
+        $this->twilio->sendSms($phone, $body);
+    }
 }
