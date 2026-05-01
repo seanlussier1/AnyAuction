@@ -9,6 +9,15 @@ use RuntimeException;
 
 final class Bid
 {
+    /**
+     * Last-minute snipe protection. A bid that lands inside the final
+     * SNIPE_WINDOW seconds extends the auction's end_time so other bidders
+     * get a chance to react. Tuned to the eBay/Heritage convention: short
+     * trigger window, several-minute extension.
+     */
+    private const SNIPE_WINDOW_SECONDS    = 120;
+    private const SNIPE_EXTENSION_SECONDS = 300;
+
     public function __construct(private readonly PDO $db)
     {
     }
@@ -39,12 +48,22 @@ final class Bid
      *   - locks the auction row,
      *   - re-checks status + end_time + minimum amount,
      *   - inserts the bid,
-     *   - updates the auction's current_price.
+     *   - updates the auction's current_price,
+     *   - extends end_time if the bid lands inside the snipe window
+     *     (skipped when the bid hits the buyout — the auction is sold).
      *
-     * Returns the new bid_id on success. Throws RuntimeException on any
-     * validation failure so the controller can surface a specific message.
+     * Throws RuntimeException on any validation failure so the controller
+     * can surface a specific message.
+     *
+     * @return array{
+     *   bid_id: int,
+     *   amount: float,
+     *   snipe_extended: bool,
+     *   new_end_time: ?string,
+     *   extension_seconds: int
+     * }
      */
-    public function place(int $itemId, int $userId, float $amount): int
+    public function place(int $itemId, int $userId, float $amount): array
     {
         if ($amount <= 0) {
             throw new RuntimeException('Bid amount must be positive.');
@@ -104,8 +123,44 @@ final class Bid
             );
             $update->execute(['amount' => $amount, 'id' => $itemId]);
 
+            // Snipe protection: extend end_time if this bid lands in the
+            // final SNIPE_WINDOW_SECONDS, but never if the buyout was hit —
+            // that auction is sold, no extension applies. GREATEST guards
+            // against accidentally shortening if the existing end_time is
+            // somehow already further out than NOW + extension.
+            $snipeExtended = false;
+            $newEndTime    = null;
+            $boughtOut     = $auction['buy_now_price'] !== null
+                          && $amount >= (float)$auction['buy_now_price'];
+            $remaining     = strtotime($auction['end_time']) - time();
+
+            if (!$boughtOut && $remaining > 0 && $remaining <= self::SNIPE_WINDOW_SECONDS) {
+                $extend = $this->db->prepare(
+                    'UPDATE auction_items
+                     SET end_time = GREATEST(end_time, NOW() + INTERVAL :secs SECOND)
+                     WHERE item_id = :id'
+                );
+                $extend->execute([
+                    'secs' => self::SNIPE_EXTENSION_SECONDS,
+                    'id'   => $itemId,
+                ]);
+
+                $read = $this->db->prepare(
+                    'SELECT end_time FROM auction_items WHERE item_id = :id'
+                );
+                $read->execute(['id' => $itemId]);
+                $newEndTime    = (string)$read->fetchColumn();
+                $snipeExtended = true;
+            }
+
             $this->db->commit();
-            return $bidId;
+            return [
+                'bid_id'            => $bidId,
+                'amount'            => $amount,
+                'snipe_extended'    => $snipeExtended,
+                'new_end_time'      => $newEndTime,
+                'extension_seconds' => self::SNIPE_EXTENSION_SECONDS,
+            ];
         } catch (\Throwable $e) {
             $this->db->rollBack();
             throw $e;

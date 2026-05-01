@@ -49,4 +49,39 @@ final class NotificationService
         // hits the right hook.
         unset($watchers, $event);
     }
+
+    /**
+     * Fan-out to everyone who has bid on the auction (deduped, actor
+     * excluded). Used today by snipe-extension events so prior bidders get
+     * a heads-up that the auction was extended and they can counter-bid.
+     *
+     * @param  string               $event   "snipe_extension", "outbid", etc.
+     * @param  array<string, mixed> $context Free-form payload — for snipe events
+     *                                       includes amount, actor_id,
+     *                                       extension_seconds, new_end_time.
+     */
+    public function notifyBidders(int $itemId, string $event, array $context = []): void
+    {
+        $stmt = $this->db->prepare(
+            'SELECT DISTINCT user_id FROM bids WHERE item_id = :id'
+        );
+        $stmt->execute(['id' => $itemId]);
+        $bidders = array_map('intval', array_column($stmt->fetchAll(), 'user_id'));
+        if ($bidders === []) {
+            return;
+        }
+
+        $actorId = (int)($context['actor_id'] ?? 0);
+        $bidders = array_values(array_filter($bidders, static fn ($uid) => $uid !== $actorId));
+        if ($bidders === []) {
+            return;
+        }
+
+        // TODO(twilio): dispatch per-bidder SMS using $event + $context.
+        // Snipe-extension template (when wired):
+        //   "Heads up — someone just bid on {title}. The auction was
+        //    extended by {extension_seconds/60} minutes and now ends at
+        //    {new_end_time}. Reply STOP to opt out."
+        unset($bidders, $event);
+    }
 }

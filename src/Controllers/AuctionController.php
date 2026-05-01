@@ -133,12 +133,32 @@ final class AuctionController
         }
 
         try {
-            (new Bid($this->db))->place($id, (int)$_SESSION['user_id'], (float)$amount);
-            (new NotificationService($this->db))->notifyWatchers($id, 'bid', [
-                'amount'   => (float)$amount,
-                'actor_id' => (int)$_SESSION['user_id'],
+            $userId = (int)$_SESSION['user_id'];
+            $result = (new Bid($this->db))->place($id, $userId, (float)$amount);
+            $finalAmount = (float)$result['amount'];
+
+            $notifs = new NotificationService($this->db);
+            $notifs->notifyWatchers($id, 'bid', [
+                'amount'   => $finalAmount,
+                'actor_id' => $userId,
             ]);
-            $this->flash->success(sprintf('Bid of $%s placed successfully.', number_format((float)$amount, 2)));
+
+            if ($result['snipe_extended']) {
+                $notifs->notifyBidders($id, 'snipe_extension', [
+                    'amount'            => $finalAmount,
+                    'actor_id'          => $userId,
+                    'extension_seconds' => $result['extension_seconds'],
+                    'new_end_time'      => $result['new_end_time'],
+                ]);
+                $extensionMinutes = (int)round($result['extension_seconds'] / 60);
+                $this->flash->success(sprintf(
+                    'Bid of $%s placed — last-minute bid, auction extended by %d minutes.',
+                    number_format($finalAmount, 2),
+                    $extensionMinutes
+                ));
+            } else {
+                $this->flash->success(sprintf('Bid of $%s placed successfully.', number_format($finalAmount, 2)));
+            }
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());
         }
