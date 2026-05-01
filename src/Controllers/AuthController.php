@@ -15,6 +15,17 @@ use Slim\Views\Twig;
 
 final class AuthController
 {
+    /**
+     * Seeded demo accounts that bypass phone enrollment + SMS 2FA so the
+     * team can log in for testing without burning a Twilio number per
+     * person. Real signups still go through the full flow.
+     */
+    private const DEMO_EMAILS = [
+        'buyer@anyauction.test',
+        'seller@anyauction.test',
+        'admin@anyauction.test',
+    ];
+
     public function __construct(
         private readonly Twig $view,
         private readonly AuthService $auth,
@@ -119,6 +130,20 @@ final class AuthController
         }
 
         $userId = (int)$user['user_id'];
+
+        // Demo accounts skip 2FA + enrollment entirely so the team can
+        // test without three real phones.
+        if (in_array(strtolower($email), self::DEMO_EMAILS, true)) {
+            unset(
+                $_SESSION['pending_enrollment_user_id'],
+                $_SESSION['_enroll_step'],
+                $_SESSION['pending_2fa_user_id'],
+                $_SESSION['pending_2fa_at']
+            );
+            $this->auth->completeLogin($userId);
+            $this->flash->success('Welcome back!');
+            return $response->withHeader('Location', '/')->withStatus(302);
+        }
 
         // Legacy users with no verified phone get pushed into enrollment
         // before they're logged in. Their session_id stays unchanged
