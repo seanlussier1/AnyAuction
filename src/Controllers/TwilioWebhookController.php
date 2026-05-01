@@ -261,6 +261,15 @@ final class TwilioWebhookController
             }
         }
 
+        // Seller-side in-site notifications mirror the website bid path.
+        $sellerId = (int)($result['seller_id'] ?? 0);
+        if ($sellerId > 0 && $sellerId !== $userId) {
+            $notifs->notifyBidReceived($sellerId, $itemId, $userId, (float)$result['amount']);
+            if (!empty($result['bought_out'])) {
+                $notifs->notifyItemSold($sellerId, $itemId, (float)$result['amount']);
+            }
+        }
+
         if (!empty($result['snipe_extended'])) {
             $notifs->notifyBidders($itemId, 'snipe_extension', [
                 'amount'            => (float)$result['amount'],

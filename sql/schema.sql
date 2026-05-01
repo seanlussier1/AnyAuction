@@ -4,6 +4,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS sessions;
 DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS orders;
@@ -175,6 +176,22 @@ CREATE TABLE sms_conversations (
     INDEX idx_sms_conv_expires (expires_at),
     CONSTRAINT fk_sms_conv_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     CONSTRAINT fk_sms_conv_item FOREIGN KEY (item_id) REFERENCES auction_items(item_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE notifications (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    type            VARCHAR(50) NOT NULL,
+    title           VARCHAR(255) NOT NULL,
+    body            TEXT NULL,
+    item_id         INT NULL,
+    href            VARCHAR(500) NULL,
+    is_read         TINYINT(1) NOT NULL DEFAULT 0,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notifications_user_unread (user_id, is_read, created_at),
+    INDEX idx_notifications_user_recent (user_id, created_at DESC),
+    CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_notif_item FOREIGN KEY (item_id) REFERENCES auction_items(item_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

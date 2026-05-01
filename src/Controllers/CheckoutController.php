@@ -9,7 +9,9 @@ use App\Models\Order;
 use App\Models\Rating;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\NotificationService;
 use App\Services\StripeService;
+use App\Services\TwilioService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -23,7 +25,8 @@ final class CheckoutController
         private readonly Twig $view,
         private readonly AuthService $auth,
         private readonly FlashService $flash,
-        private readonly StripeService $stripe
+        private readonly StripeService $stripe,
+        private readonly TwilioService $twilio
     ) {
     }
 
@@ -144,6 +147,21 @@ final class CheckoutController
             $order['status']  = 'paid';
             $order['paid_at'] = date('Y-m-d H:i:s');
             $this->flash->success('Payment confirmed — thanks for your purchase!');
+
+            // Tell the seller their payout is on its way. Look up the
+            // seller from the auction this order paid for.
+            $sellerStmt = $this->db->prepare(
+                'SELECT seller_id FROM auction_items WHERE item_id = :id'
+            );
+            $sellerStmt->execute(['id' => (int)$order['item_id']]);
+            $sellerId = (int)$sellerStmt->fetchColumn();
+            if ($sellerId > 0) {
+                (new NotificationService($this->db, $this->twilio))->notifyOrderPaid(
+                    $sellerId,
+                    (int)$order['item_id'],
+                    (float)$order['amount']
+                );
+            }
         }
 
         $alreadyRated = false;

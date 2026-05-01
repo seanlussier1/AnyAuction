@@ -115,6 +115,12 @@ final class AuctionController
                 $notifs->notifyAuctionLost($id, $prevBidderId, (float)$result['amount']);
             }
 
+            // Tell the seller their item just sold.
+            $sellerId = (int)($result['seller_id'] ?? 0);
+            if ($sellerId > 0 && $sellerId !== $userId) {
+                $notifs->notifyItemSold($sellerId, $id, (float)$result['amount']);
+            }
+
             $this->flash->success('Item secured at the buyout price — proceed to checkout.');
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());
@@ -165,6 +171,15 @@ final class AuctionController
                     $notifs->notifyAuctionLost($id, $prevBidderId, $finalAmount);
                 } else {
                     $notifs->notifyOutbid($id, $prevBidderId, $finalAmount);
+                }
+            }
+
+            // In-site notifications for the seller side.
+            $sellerId = (int)($result['seller_id'] ?? 0);
+            if ($sellerId > 0 && $sellerId !== $userId) {
+                $notifs->notifyBidReceived($sellerId, $id, $userId, $finalAmount);
+                if (!empty($result['bought_out'])) {
+                    $notifs->notifyItemSold($sellerId, $id, $finalAmount);
                 }
             }
 

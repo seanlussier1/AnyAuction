@@ -68,7 +68,7 @@
         <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-watchlist"     type="button"><i class="bi bi-heart me-1"></i>Watchlist</button></li>
         <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-orders"        type="button"><i class="bi bi-box me-1"></i>Orders</button></li>
         <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-reviews"       type="button"><i class="bi bi-chat-dots me-1"></i>Reviews</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-notifications" type="button"><i class="bi bi-bell me-1"></i>Notifications</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-notifications" type="button" id="aa-notifs-tab"><i class="bi bi-bell me-1"></i>Notifications {% if unread_notifs > 0 %}<span class="badge bg-warning text-dark ms-1">{{ unread_notifs }}</span>{% endif %}</button></li>
         <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-settings"      type="button"><i class="bi bi-gear me-1"></i>Settings</button></li>
     </ul>
 
@@ -289,10 +289,48 @@
         </div>
 
         <div class="tab-pane fade" id="tab-notifications" role="tabpanel">
-            <div class="text-center py-5 text-muted-aa">
-                <i class="bi bi-bell fs-1 opacity-25 d-block mb-2"></i>
-                <p>Notifications (outbid, won, snipe protection, order updates) come online alongside the Twilio + email stack.</p>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 mb-0">Notifications</h2>
+                    <div class="small text-muted-aa">{{ notifications|length }} recent · {{ unread_notifs }} unread</div>
+                </div>
             </div>
+            {% if notifications|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-bell fs-1 opacity-25 d-block mb-2"></i>
+                    <p>You're all caught up. Bids, outbids, sales, and payments will land here as they happen.</p>
+                </div>
+            {% else %}
+                <div class="d-flex flex-column gap-2">
+                    {% for n in notifications %}
+                        {% set icon = 'bi-bell' %}
+                        {% set tone = 'secondary' %}
+                        {% if n.type == 'outbid' %}{% set icon = 'bi-arrow-up-circle' %}{% set tone = 'warning' %}
+                        {% elseif n.type == 'auction_won' %}{% set icon = 'bi-trophy-fill' %}{% set tone = 'success' %}
+                        {% elseif n.type == 'auction_lost' %}{% set icon = 'bi-x-circle' %}{% set tone = 'secondary' %}
+                        {% elseif n.type == 'snipe_extended' %}{% set icon = 'bi-stopwatch' %}{% set tone = 'info' %}
+                        {% elseif n.type == 'bid_received' %}{% set icon = 'bi-cash-coin' %}{% set tone = 'info' %}
+                        {% elseif n.type == 'item_sold' %}{% set icon = 'bi-check-circle-fill' %}{% set tone = 'success' %}
+                        {% elseif n.type == 'order_paid' %}{% set icon = 'bi-credit-card-2-front' %}{% set tone = 'success' %}
+                        {% elseif n.type == 'welcome' %}{% set icon = 'bi-stars' %}{% set tone = 'warning' %}
+                        {% elseif n.type starts with 'watchlist_' %}{% set icon = 'bi-heart' %}{% set tone = 'danger' %}
+                        {% endif %}
+                        <a href="{{ n.href|default('#') }}" class="d-flex align-items-start gap-3 p-3 rounded-lg-aa border text-decoration-none text-dark {% if n.is_read == 0 %}bg-warning-subtle{% endif %}">
+                            <span class="aa-brand-badge bg-{{ tone }}-subtle text-{{ tone }}-emphasis d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                <i class="bi {{ icon }} fs-5"></i>
+                            </span>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <div class="fw-medium">{{ n.title }}</div>
+                                    {% if n.is_read == 0 %}<span class="badge bg-warning text-dark">New</span>{% endif %}
+                                </div>
+                                {% if n.body %}<div class="small text-muted-aa">{{ n.body }}</div>{% endif %}
+                                <div class="small text-muted-aa opacity-75">{{ n.created_at|date('M j, Y g:i a') }}</div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
         <div class="tab-pane fade" id="tab-settings" role="tabpanel">
@@ -346,4 +384,26 @@
 
     </div>
 </div>
+
+{# Mark notifications read the moment the Notifications tab is shown.
+   Hides the bell badge in the navbar + the tab-label badge so the unread
+   count visually clears in step with the server-side flag flip. #}
+<script>
+    (function () {
+        var trigger = document.getElementById('aa-notifs-tab');
+        if (!trigger) return;
+        trigger.addEventListener('shown.bs.tab', function () {
+            var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            fetch('/api/notifications/mark-read', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' },
+            }).then(function () {
+                document.querySelectorAll('.aa-bell-badge, #aa-notifs-tab .badge').forEach(function (el) {
+                    el.remove();
+                });
+            }).catch(function () { /* silent */ });
+        });
+    })();
+</script>
 {% endblock %}

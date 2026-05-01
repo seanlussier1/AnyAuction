@@ -7,8 +7,10 @@ namespace App\Controllers;
 use App\Services\AuthCodeService;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\NotificationService;
 use App\Services\PhoneNormalizer;
 use App\Services\TwilioService;
+use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Views\Twig;
@@ -31,7 +33,8 @@ final class AuthController
         private readonly AuthService $auth,
         private readonly FlashService $flash,
         private readonly AuthCodeService $codes,
-        private readonly TwilioService $twilio
+        private readonly TwilioService $twilio,
+        private readonly PDO $db
     ) {
     }
 
@@ -78,6 +81,10 @@ final class AuthController
         if ($newId === null) {
             return $this->view->render($response, 'auth/register.twig', ['old' => $old]);
         }
+
+        // Drop a welcome notification so the new user has something on the
+        // bell from day one. Always site-only — no SMS for this event.
+        (new NotificationService($this->db, $this->twilio))->notifyWelcome($newId, $firstName);
 
         // Force the new user through phone verification before logging them
         // in. The phone is on the row but phone_verified_at is NULL, so the

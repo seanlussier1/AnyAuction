@@ -65,7 +65,8 @@ final class Bid
      *   extension_seconds: int,
      *   previous_bidder_id: ?int,
      *   previous_bid_amount: ?float,
-     *   bought_out: bool
+     *   bought_out: bool,
+     *   seller_id: int
      * }
      */
     public function place(int $itemId, int $userId, float $amount): array
@@ -183,6 +184,7 @@ final class Bid
                 'previous_bidder_id'  => $previousBidderId,
                 'previous_bid_amount' => $previousBidAmount,
                 'bought_out'          => $boughtOut,
+                'seller_id'           => (int)$auction['seller_id'],
             ];
         } catch (\Throwable $e) {
             $this->db->rollBack();

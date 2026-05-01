@@ -59,9 +59,11 @@ $app->add(function (Request $request, RequestHandler $handler) use ($container):
     }
 
     $watchlistIds = [];
+    $unreadNotifs = 0;
     if ($auth->isLoggedIn()) {
-        $watchlistIds = (new \App\Models\Watchlist($container->get(\PDO::class)))
-            ->idsForUser((int)$_SESSION['user_id']);
+        $pdo          = $container->get(\PDO::class);
+        $watchlistIds = (new \App\Models\Watchlist($pdo))->idsForUser((int)$_SESSION['user_id']);
+        $unreadNotifs = (new \App\Models\Notification($pdo))->unreadCountForUser((int)$_SESSION['user_id']);
     }
 
     $versionPath = __DIR__ . '/../.version';
@@ -71,12 +73,13 @@ $app->add(function (Request $request, RequestHandler $handler) use ($container):
     }
 
     $env = $twig->getEnvironment();
-    $env->addGlobal('current_user',   $auth->currentUser());
-    $env->addGlobal('flash',          $flash->pullAll());
-    $env->addGlobal('request_path',   $request->getUri()->getPath());
-    $env->addGlobal('csrf_token',     $_SESSION['_csrf']);
-    $env->addGlobal('watchlist_ids',  $watchlistIds);
-    $env->addGlobal('app_version',    $appVersion);
+    $env->addGlobal('current_user',          $auth->currentUser());
+    $env->addGlobal('flash',                 $flash->pullAll());
+    $env->addGlobal('request_path',          $request->getUri()->getPath());
+    $env->addGlobal('csrf_token',            $_SESSION['_csrf']);
+    $env->addGlobal('watchlist_ids',         $watchlistIds);
+    $env->addGlobal('unread_notifications',  $unreadNotifs);
+    $env->addGlobal('app_version',           $appVersion);
 
     return $handler->handle($request);
 });

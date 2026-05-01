@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Notification;
 use App\Models\SmsConversation;
 use App\Models\Watchlist;
 use PDO;
@@ -11,13 +12,14 @@ use PDO;
 /**
  * Bid/buyout notification fan-out.
  *
- * Today the watchlist + bidder fan-outs are still no-ops (those go through a
- * future opt-in/throttle table). The outbid path IS live — when a buyer is
- * displaced as the high bidder we send them an SMS that opens an inbound
- * conversation in `sms_conversations`, so they can text back a counter-bid.
+ * Two channels:
+ *   - SMS (Twilio) — only fires when the user has a verified phone and
+ *     hasn't opted out via STOP.
+ *   - In-site feed — always fires, persisted in the `notifications` table,
+ *     surfaced on the profile Notifications tab + bell badge.
  *
- * The bidder themselves should be excluded from the fan-out — pass their
- * user id via `$context['actor_id']`.
+ * The bidder/buyer themselves should be excluded from the fan-out — pass
+ * their user id via `$context['actor_id']`.
  */
 final class NotificationService
 {
@@ -44,23 +46,35 @@ final class NotificationService
         }
         $actorId = (int)($context['actor_id'] ?? 0);
         $watchers = array_values(array_filter($watchers, static fn ($uid) => $uid !== $actorId));
+        if ($watchers === []) {
+            return;
+        }
 
-        // TODO(twilio): dispatch per-watcher SMS using $event + $context.
-        // Intentionally a no-op until the per-user opt-in/throttle table
-        // lands. Keeping the call here so the bid/buyout flow already hits
-        // the right hook.
-        unset($watchers, $event);
+        $title = $this->lookupTitle($itemId);
+        if ($title === '') {
+            return;
+        }
+
+        $amount = isset($context['amount']) ? (float)$context['amount'] : 0.0;
+        [$ntype, $heading, $body] = match ($event) {
+            'bid'    => ['watchlist_bid',    'New bid on a watched item',    sprintf("Someone bid \$%s on '%s'.", number_format($amount, 2), $title)],
+            'buyout' => ['watchlist_buyout', 'Watched item was bought out',  sprintf("'%s' was bought out for \$%s.", $title, number_format($amount, 2))],
+            default  => ['watchlist_event',  'Watched item update',          sprintf("There's an update on '%s'.", $title)],
+        };
+        $href = '/auction/' . $itemId;
+
+        $notif = new Notification($this->db);
+        foreach ($watchers as $uid) {
+            $notif->create((int)$uid, $ntype, $heading, $body, $itemId, $href);
+        }
+
+        // SMS path is intentionally still a no-op for watchers — too noisy.
     }
 
     /**
      * Fan-out to everyone who has bid on the auction (deduped, actor
-     * excluded). Used today by snipe-extension events so prior bidders get
+     * excluded). Used by snipe-extension events so prior bidders get
      * a heads-up that the auction was extended and they can counter-bid.
-     *
-     * @param  string               $event   "snipe_extension", "outbid", etc.
-     * @param  array<string, mixed> $context Free-form payload — for snipe events
-     *                                       includes amount, actor_id,
-     *                                       extension_seconds, new_end_time.
      */
     public function notifyBidders(int $itemId, string $event, array $context = []): void
     {
@@ -79,55 +93,58 @@ final class NotificationService
             return;
         }
 
-        // TODO(twilio): dispatch per-bidder SMS using $event + $context.
-        // Snipe-extension template (when wired):
-        //   "Heads up — someone just bid on {title}. The auction was
-        //    extended by {extension_seconds/60} minutes and now ends at
-        //    {new_end_time}. Reply STOP to opt out."
-        unset($bidders, $event);
-    }
-
-    /**
-     * Tell the displaced high bidder they've been outbid. We:
-     *   1. Look up their phone + opt-in. Skip silently if unverified or opted out.
-     *   2. Open (or replace) an `sms_conversations` row in `waiting_amount` state
-     *      so a follow-up reply with a dollar amount routes through the
-     *      Twilio webhook back into Bid::place.
-     *   3. Send the SMS via TwilioService (which is itself a silent no-op when
-     *      Twilio creds are unset, so dev environments don't 500).
-     *
-     * Caller is responsible for not invoking when previous_bidder_id matches
-     * the new bidder (e.g. raising your own max bid shouldn't text yourself).
-     */
-    public function notifyOutbid(int $itemId, int $previousBidderId, float $newAmount): void
-    {
-        $userStmt = $this->db->prepare(
-            'SELECT phone, phone_verified_at, sms_opt_out
-             FROM users
-             WHERE user_id = :id'
-        );
-        $userStmt->execute(['id' => $previousBidderId]);
-        $user = $userStmt->fetch();
-        if (!$user) {
-            return;
-        }
-
-        $phone = (string)($user['phone'] ?? '');
-        if ($phone === '' || $user['phone_verified_at'] === null) {
-            return;
-        }
-        if ((int)$user['sms_opt_out'] === 1) {
-            return;
-        }
-
-        $titleStmt = $this->db->prepare(
-            'SELECT title FROM auction_items WHERE item_id = :id'
-        );
-        $titleStmt->execute(['id' => $itemId]);
-        $title = (string)$titleStmt->fetchColumn();
+        $title = $this->lookupTitle($itemId);
         if ($title === '') {
             return;
         }
+
+        if ($event === 'snipe_extension') {
+            $extMin = (int)round(((int)($context['extension_seconds'] ?? 300)) / 60);
+            $heading = 'Auction extended';
+            $body    = sprintf(
+                "A last-minute bid extended '%s' by %d more minutes. Get back in the action.",
+                $title,
+                $extMin
+            );
+            $ntype = 'snipe_extended';
+            $href  = '/auction/' . $itemId;
+
+            $notif = new Notification($this->db);
+            foreach ($bidders as $uid) {
+                $notif->create((int)$uid, $ntype, $heading, $body, $itemId, $href);
+            }
+        }
+
+        // SMS path: still a TODO — too noisy without per-user opt-in.
+    }
+
+    /**
+     * Tell the displaced high bidder they've been outbid (DB + SMS). The
+     * SMS opens an inbound conversation so the user can text back a
+     * counter-bid via the Twilio webhook.
+     */
+    public function notifyOutbid(int $itemId, int $previousBidderId, float $newAmount): void
+    {
+        $user  = $this->lookupUser($previousBidderId);
+        $title = $this->lookupTitle($itemId);
+        if ($user === null || $title === '') {
+            return;
+        }
+
+        // Always record the in-site notification, regardless of SMS prefs.
+        (new Notification($this->db))->create(
+            $previousBidderId,
+            'outbid',
+            'You were outbid',
+            sprintf("Someone bid \$%s on '%s'. You can place a higher bid to take the lead.", number_format($newAmount, 2), $title),
+            $itemId,
+            '/auction/' . $itemId
+        );
+
+        if (!$this->canSms($user)) {
+            return;
+        }
+        $phone = (string)$user['phone'];
 
         // Open the conversation BEFORE sending the SMS so the buyer's reply
         // never races a missing row. INSERT … ON DUPLICATE KEY UPDATE means
@@ -139,118 +156,197 @@ final class NotificationService
             self::OUTBID_CONVERSATION_TTL_SECONDS
         );
 
-        $body = sprintf(
-            "AnyAuction: a buyer outbid you on '%s' at $%s. Reply with a new bid amount or STOP to opt out.",
-            $title,
-            number_format($newAmount, 2)
+        $this->twilio->sendSms(
+            $phone,
+            sprintf(
+                "AnyAuction: a buyer outbid you on '%s' at $%s. Reply with a new bid amount or STOP to opt out.",
+                $title,
+                number_format($newAmount, 2)
+            )
         );
-
-        $this->twilio->sendSms($phone, $body);
     }
 
     /**
-     * Tell the displaced high bidder that the auction was bought out — game
-     * over, no follow-up bid possible. Like notifyOutbid but does NOT open
-     * an `sms_conversations` row (there's nothing to reply to) and uses a
-     * "sold" message instead of the "rebid" prompt.
-     *
-     * Caller is responsible for not invoking when the displaced bidder
-     * matches the buyer (raising your own max bid into the buyout).
+     * Tell the displaced high bidder that the auction was bought out —
+     * game over, no follow-up bid possible.
      */
     public function notifyAuctionLost(int $itemId, int $previousBidderId, float $finalAmount): void
     {
-        $userStmt = $this->db->prepare(
-            'SELECT phone, phone_verified_at, sms_opt_out
-             FROM users
-             WHERE user_id = :id'
-        );
-        $userStmt->execute(['id' => $previousBidderId]);
-        $user = $userStmt->fetch();
-        if (!$user) {
+        $user  = $this->lookupUser($previousBidderId);
+        $title = $this->lookupTitle($itemId);
+        if ($user === null || $title === '') {
             return;
         }
 
-        $phone = (string)($user['phone'] ?? '');
-        if ($phone === '' || $user['phone_verified_at'] === null) {
-            return;
-        }
-        if ((int)$user['sms_opt_out'] === 1) {
-            return;
-        }
-
-        $titleStmt = $this->db->prepare(
-            'SELECT title FROM auction_items WHERE item_id = :id'
-        );
-        $titleStmt->execute(['id' => $itemId]);
-        $title = (string)$titleStmt->fetchColumn();
-        if ($title === '') {
-            return;
-        }
-
-        // No conversation row — auction is sold, no further bidding possible.
-        // If a stale waiting_* row exists for this phone (from an earlier
-        // outbid), clear it so a future text doesn't try to bid on this
-        // closed auction.
-        (new \App\Models\SmsConversation($this->db))->delete($phone);
-
-        $body = sprintf(
-            "AnyAuction: '%s' was bought out for $%s. The auction is closed — better luck next time! Reply STOP to opt out.",
-            $title,
-            number_format($finalAmount, 2)
+        (new Notification($this->db))->create(
+            $previousBidderId,
+            'auction_lost',
+            'Auction bought out',
+            sprintf("'%s' was bought out for \$%s. The auction is now closed.", $title, number_format($finalAmount, 2)),
+            $itemId,
+            '/auction/' . $itemId
         );
 
-        $this->twilio->sendSms($phone, $body);
+        if (!$this->canSms($user)) {
+            return;
+        }
+        $phone = (string)$user['phone'];
+
+        // Clear any stale waiting_* row so future texts don't try to bid on
+        // this closed auction.
+        (new SmsConversation($this->db))->delete($phone);
+
+        $this->twilio->sendSms(
+            $phone,
+            sprintf(
+                "AnyAuction: '%s' was bought out for $%s. The auction is closed — better luck next time! Reply STOP to opt out.",
+                $title,
+                number_format($finalAmount, 2)
+            )
+        );
     }
 
     /**
      * Tell the winning bidder that a time-expired auction closed in their
-     * favour. Fired by AuctionExpiryService on the periodic sweep, so this
-     * is a one-shot terminal message — no conversation row, no follow-up
-     * SMS bidding (the auction is over).
-     *
-     * Caller is responsible for not invoking on buyout-closed auctions
-     * (those flowed through the checkout path and don't need a re-notify).
+     * favour. One-shot terminal message — no follow-up SMS bidding.
      */
     public function notifyAuctionWon(int $winnerId, int $itemId, float $winningBid): void
     {
-        $userStmt = $this->db->prepare(
-            'SELECT phone, phone_verified_at, sms_opt_out
-             FROM users
-             WHERE user_id = :id'
-        );
-        $userStmt->execute(['id' => $winnerId]);
-        $user = $userStmt->fetch();
-        if (!$user) {
+        $user  = $this->lookupUser($winnerId);
+        $title = $this->lookupTitle($itemId);
+        if ($user === null || $title === '') {
             return;
         }
 
-        $phone = (string)($user['phone'] ?? '');
-        if ($phone === '' || $user['phone_verified_at'] === null) {
-            return;
-        }
-        if ((int)$user['sms_opt_out'] === 1) {
-            return;
-        }
-
-        $titleStmt = $this->db->prepare(
-            'SELECT title FROM auction_items WHERE item_id = :id'
+        (new Notification($this->db))->create(
+            $winnerId,
+            'auction_won',
+            'You won an auction!',
+            sprintf("Congrats — '%s' is yours at \$%s. Check your profile for next steps.", $title, number_format($winningBid, 2)),
+            $itemId,
+            '/auction/' . $itemId
         );
-        $titleStmt->execute(['id' => $itemId]);
-        $title = (string)$titleStmt->fetchColumn();
+
+        if (!$this->canSms($user)) {
+            return;
+        }
+        $phone = (string)$user['phone'];
+
+        (new SmsConversation($this->db))->delete($phone);
+
+        $this->twilio->sendSms(
+            $phone,
+            sprintf(
+                "AnyAuction: you won '%s' at $%s! Check your profile for next steps. Reply STOP to opt out.",
+                $title,
+                number_format($winningBid, 2)
+            )
+        );
+    }
+
+    /**
+     * Site-only: tell the seller someone placed a bid on their listing.
+     * No SMS — sellers get the digest in the Notifications tab.
+     */
+    public function notifyBidReceived(int $sellerId, int $itemId, int $bidderId, float $amount): void
+    {
+        if ($sellerId === $bidderId) {
+            return;
+        }
+        $title = $this->lookupTitle($itemId);
         if ($title === '') {
             return;
         }
 
-        // Clear any stale waiting_* conversation row for this phone so the
-        // closed auction can't accidentally match a future text reply.
-        (new \App\Models\SmsConversation($this->db))->delete($phone);
-
-        $body = sprintf(
-            "AnyAuction: you won '%s' at $%s! Check your profile for next steps. Reply STOP to opt out.",
-            $title,
-            number_format($winningBid, 2)
+        (new Notification($this->db))->create(
+            $sellerId,
+            'bid_received',
+            'New bid on your listing',
+            sprintf("A buyer bid \$%s on '%s'.", number_format($amount, 2), $title),
+            $itemId,
+            '/auction/' . $itemId
         );
+    }
 
-        $this->twilio->sendSms($phone, $body);
+    /**
+     * Site-only: tell the seller their item was bought out.
+     */
+    public function notifyItemSold(int $sellerId, int $itemId, float $finalAmount): void
+    {
+        $title = $this->lookupTitle($itemId);
+        if ($title === '') {
+            return;
+        }
+
+        (new Notification($this->db))->create(
+            $sellerId,
+            'item_sold',
+            'Your item sold',
+            sprintf("'%s' was bought out for \$%s. Watch your dashboard for the payout.", $title, number_format($finalAmount, 2)),
+            $itemId,
+            '/auction/' . $itemId
+        );
+    }
+
+    /**
+     * Site-only: tell the seller a buyer's payment cleared on Stripe.
+     */
+    public function notifyOrderPaid(int $sellerId, int $itemId, float $amount): void
+    {
+        $title = $this->lookupTitle($itemId);
+        if ($title === '') {
+            return;
+        }
+
+        (new Notification($this->db))->create(
+            $sellerId,
+            'order_paid',
+            'Payment received',
+            sprintf("Buyer paid \$%s for '%s'. Time to ship!", number_format($amount, 2), $title),
+            $itemId,
+            '/profile'
+        );
+    }
+
+    /**
+     * Site-only: friendly welcome on signup.
+     */
+    public function notifyWelcome(int $userId, string $firstName): void
+    {
+        (new Notification($this->db))->create(
+            $userId,
+            'welcome',
+            'Welcome to AnyAuction!',
+            sprintf("Hey %s — your account is ready. Add items to your watchlist or start a listing whenever you're ready.", $firstName),
+            null,
+            '/browse'
+        );
+    }
+
+    private function lookupUser(int $userId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT phone, phone_verified_at, sms_opt_out
+             FROM users
+             WHERE user_id = :id'
+        );
+        $stmt->execute(['id' => $userId]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    private function lookupTitle(int $itemId): string
+    {
+        $stmt = $this->db->prepare('SELECT title FROM auction_items WHERE item_id = :id');
+        $stmt->execute(['id' => $itemId]);
+        return (string)$stmt->fetchColumn();
+    }
+
+    private function canSms(array $user): bool
+    {
+        $phone = (string)($user['phone'] ?? '');
+        return $phone !== ''
+            && $user['phone_verified_at'] !== null
+            && (int)$user['sms_opt_out'] !== 1;
     }
 }

@@ -10,6 +10,7 @@ use App\Controllers\BrowseController;
 use App\Controllers\CheckoutController;
 use App\Controllers\HeartbeatController;
 use App\Controllers\HomeController;
+use App\Controllers\NotificationController;
 use App\Controllers\PasswordResetController;
 use App\Controllers\PhoneEnrollmentController;
 use App\Controllers\ProfileController;
@@ -35,6 +36,7 @@ return function (App $app): void {
     $app->get('/browse',     [BrowseController::class, 'index']);
     $app->get('/api/search',    [SearchController::class, 'suggest']);
     $app->get('/api/heartbeat', [HeartbeatController::class, 'index']);
+    $app->post('/api/notifications/mark-read', [NotificationController::class, 'markAllRead']);
     $app->get('/sell',      [SellController::class, 'showForm']);
     $app->post('/sell',     [SellController::class, 'create']);
     $app->get('/watchlist',                 [WatchlistController::class, 'index']);

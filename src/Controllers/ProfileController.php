@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Auction;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\Rating;
 use App\Models\Watchlist;
@@ -62,6 +63,10 @@ final class ProfileController
         $statsData = $rating->statsForUser($userId);
         $reviews   = $rating->reviewsForUser($userId);
 
+        $notifModel    = new Notification($this->db);
+        $notifications = $notifModel->forUser($userId, 50);
+        $unreadNotifs  = $notifModel->unreadCountForUser($userId);
+
         $orderIds = array_merge(
             array_map('intval', array_column($orders, 'order_id')),
             array_map('intval', array_column($soldOrders, 'order_id'))
@@ -105,6 +110,8 @@ final class ProfileController
             'rated_orders'        => $ratedMap,
             'sold_orders_by_item' => $soldOrdersByItem,
             'won_orders_by_item'  => $wonOrdersByItem,
+            'notifications'       => $notifications,
+            'unread_notifs'       => $unreadNotifs,
             'csrf'                => $this->ensureCsrfToken(),
             'stats'               => $stats,
         ]);
