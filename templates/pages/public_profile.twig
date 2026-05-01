@@ -45,6 +45,45 @@
         </div>
     </div>
 
+    {% if rateable_orders|length > 0 %}
+        <div class="p-3 mb-4 rounded-lg-aa border border-warning-subtle bg-warning-subtle">
+            <h2 class="h6 mb-2"><i class="bi bi-star me-1 text-warning"></i>Leave a rating for {{ profile_user.first_name }}</h2>
+            <p class="small text-muted-aa mb-3">You have {{ rateable_orders|length }} unrated transaction{{ rateable_orders|length == 1 ? '' : 's' }} with this user. Reviews can be left at any time.</p>
+            <div class="d-flex flex-column gap-2">
+                {% for o in rateable_orders %}
+                    {% set label = o.rater_role == 'buyer' ? 'Rate seller' : 'Rate buyer' %}
+                    <div class="p-3 rounded-lg-aa border bg-white">
+                        <div class="d-flex align-items-center gap-3">
+                            {% if o.primary_image %}
+                                <img src="{{ o.primary_image }}" alt="" style="width: 48px; height: 48px; object-fit: cover; border-radius: 0.5rem; flex-shrink: 0;">
+                            {% else %}
+                                <span class="aa-brand-badge d-inline-flex align-items-center justify-content-center" style="width: 48px; height: 48px; flex-shrink: 0;"><i class="bi bi-image"></i></span>
+                            {% endif %}
+                            <div class="flex-grow-1 min-w-0">
+                                <a href="/auction/{{ o.item_id }}" class="text-decoration-none text-dark">
+                                    <div class="fw-medium text-truncate">{{ o.title }}</div>
+                                </a>
+                                <div class="small text-muted-aa">
+                                    {{ o.rater_role == 'buyer' ? 'You bought this' : 'You sold this' }}
+                                    · Order #{{ o.order_id }}
+                                    {% if o.paid_at %} · paid {{ o.paid_at|date('M j, Y') }}{% endif %}
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-warning flex-shrink-0" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#rate-pp-{{ o.order_id }}"
+                                    aria-expanded="false">
+                                <i class="bi bi-star me-1"></i>{{ label }}
+                            </button>
+                        </div>
+                        <div class="collapse" id="rate-pp-{{ o.order_id }}">
+                            {% include 'partials/rate_form.twig' with { order_id: o.order_id, label: label, csrf: csrf } only %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
     <div class="row g-4">
         <div class="col-lg-7">
             <h2 class="h5 mb-3">Reviews</h2>

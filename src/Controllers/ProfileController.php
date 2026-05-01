@@ -75,6 +75,13 @@ final class ProfileController
             $soldOrdersByItem[(int)$row['item_id']] = $row;
         }
 
+        // Same idea for the Won tab — buyer-side mirror so each won card
+        // can render a "Rate seller" button keyed on its real order_id.
+        $wonOrdersByItem = [];
+        foreach ($orders as $row) {
+            $wonOrdersByItem[(int)$row['item_id']] = $row;
+        }
+
         $stats = [
             'active_listings'      => count($listings),
             'total_listings'       => count($allListings),
@@ -97,6 +104,7 @@ final class ProfileController
             'reviews'             => $reviews,
             'rated_orders'        => $ratedMap,
             'sold_orders_by_item' => $soldOrdersByItem,
+            'won_orders_by_item'  => $wonOrdersByItem,
             'csrf'                => $this->ensureCsrfToken(),
             'stats'               => $stats,
         ]);

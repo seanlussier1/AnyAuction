@@ -169,7 +169,26 @@
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
                     {% for auction in won %}
-                        <div class="col">{% include 'partials/auction_card.twig' with { auction: auction } only %}</div>
+                        <div class="col">
+                            {% include 'partials/auction_card.twig' with { auction: auction } only %}
+                            {% set wo = won_orders_by_item[auction.item_id] ?? null %}
+                            {% if wo and wo.status == 'paid' %}
+                                <div class="mt-2">
+                                    {% if rated_orders[wo.order_id] %}
+                                        <span class="badge bg-success-subtle text-success-emphasis w-100 d-block py-1"><i class="bi bi-check-circle me-1"></i>Rated seller</span>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-warning w-100" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#rate-won-{{ wo.order_id }}"
+                                                aria-expanded="false">
+                                            <i class="bi bi-star me-1"></i>Rate seller
+                                        </button>
+                                        <div class="collapse" id="rate-won-{{ wo.order_id }}">
+                                            {% include 'partials/rate_form.twig' with { order_id: wo.order_id, label: 'Rate seller', csrf: csrf } only %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
                     {% endfor %}
                 </div>
             {% endif %}

@@ -118,6 +118,39 @@ final class Order
     }
 
     /**
+     * Paid orders that involve both users in either direction (one as buyer
+     * and the other as seller). Used to surface a rate-the-other-party
+     * button on a public profile when the viewer has transacted with the
+     * profile owner.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function forParticipants(int $userA, int $userB): array
+    {
+        // Each placeholder used once — emulated prepares are off in
+        // config/container.php, so re-using :a/:b would fail with HY093.
+        $stmt = $this->db->prepare('
+            SELECT o.order_id, o.item_id, o.buyer_id, o.amount, o.status,
+                   o.created_at, o.paid_at,
+                   a.seller_id, a.title,
+                   (SELECT image_url FROM item_images
+                      WHERE item_id = a.item_id
+                      ORDER BY is_primary DESC, display_order ASC
+                      LIMIT 1) AS primary_image
+            FROM orders o
+            JOIN auction_items a ON a.item_id = o.item_id
+            WHERE o.status = \'paid\'
+              AND ((o.buyer_id = :a1 AND a.seller_id = :b1)
+                OR (o.buyer_id = :b2 AND a.seller_id = :a2))
+            ORDER BY o.created_at DESC');
+        $stmt->execute([
+            'a1' => $userA, 'b1' => $userB,
+            'a2' => $userA, 'b2' => $userB,
+        ]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Has this item already been paid for? Used to gate the checkout-start
      * action so the same auction can't be charged twice.
      */
