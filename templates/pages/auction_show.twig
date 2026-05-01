@@ -245,6 +245,14 @@
                 </div>
             </div>
 
+            {% if current_user %}
+                <div class="mt-2 small">
+                    <a href="/report/listing/{{ auction.item_id }}" class="text-muted-aa text-decoration-none">
+                        <i class="bi bi-flag me-1"></i>Report this listing
+                    </a>
+                </div>
+            {% endif %}
+
             <h3 class="h5 mt-4">Recent bids</h3>
             {% if bids|length == 0 %}
                 <p class="text-muted-aa small">No bids yet. Be the first!</p>

@@ -16,6 +16,7 @@ use App\Controllers\PhoneEnrollmentController;
 use App\Controllers\ProfileController;
 use App\Controllers\PublicProfileController;
 use App\Controllers\RatingController;
+use App\Controllers\ReportController;
 use App\Controllers\SearchController;
 use App\Controllers\SellController;
 use App\Controllers\TwilioWebhookController;
@@ -45,6 +46,12 @@ return function (App $app): void {
     $app->get('/profile',          [ProfileController::class, 'index']);
     $app->get('/users/{id}',       [PublicProfileController::class, 'show']);
     $app->post('/rate/{orderId}',  [RatingController::class, 'submit']);
+
+    $app->get('/report/listing/{itemId}',  [ReportController::class, 'showListing']);
+    $app->post('/report/listing/{itemId}', [ReportController::class, 'submitListing']);
+    $app->post('/report/{id}/resolve',     [ReportController::class, 'resolve']);
+    $app->post('/report/{id}/dismiss',     [ReportController::class, 'dismiss']);
+
     $app->get('/admin',            [AdminController::class, 'index']);
 
     $app->get('/register',  [AuthController::class, 'showRegister']);

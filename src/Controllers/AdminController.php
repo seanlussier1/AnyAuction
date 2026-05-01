@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Auction;
+use App\Models\Report;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\FlashService;
@@ -38,6 +39,7 @@ final class AdminController
 
         $auctions = new Auction($this->db);
         $users    = new User($this->db);
+        $reports  = new Report($this->db);
 
         $activeTab   = (string)($request->getQueryParams()['tab']    ?? 'overview');
         $userSearch  = trim((string)($request->getQueryParams()['uq'] ?? ''));
@@ -45,15 +47,8 @@ final class AdminController
         $stats = [
             'active_auctions'  => $auctions->countActive(),
             'total_users'      => $users->countAll(),
-            'pending_reports'  => 2,             // mock — real reports table comes later
+            'pending_reports'  => $reports->countPending(),
             'revenue_30d'      => '$128,450',    // mock — needs orders/payments
-        ];
-
-        // Hand-picked mock reports so the Reports tab has something to render.
-        $reports = [
-            ['id' => 'f1', 'type' => 'listing', 'name' => 'Suspicious Electronics Bundle', 'reason' => 'Possible counterfeit items', 'reported_by' => 'user-44', 'created_at' => '2026-04-05', 'status' => 'pending'],
-            ['id' => 'f2', 'type' => 'user',    'name' => 'FastFlip99',                   'reason' => 'Multiple buyer complaints', 'reported_by' => 'user-12', 'created_at' => '2026-04-04', 'status' => 'pending'],
-            ['id' => 'f3', 'type' => 'listing', 'name' => 'Designer Bags — Bulk',          'reason' => 'Copyright infringement suspected', 'reported_by' => 'user-07', 'created_at' => '2026-04-03', 'status' => 'resolved'],
         ];
 
         return $this->view->render($response, 'pages/admin.twig', [
@@ -62,7 +57,7 @@ final class AdminController
             'category_counts' => $auctions->countByCategory(),
             'users'           => $users->adminAll($userSearch ?: null),
             'listings'        => $auctions->adminAll(),
-            'reports'         => $reports,
+            'reports'         => $reports->adminAll(),
             'active_tab'      => in_array($activeTab, ['overview', 'users', 'listings', 'reports'], true) ? $activeTab : 'overview',
             'user_search'     => $userSearch,
         ]);

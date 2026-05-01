@@ -116,6 +116,16 @@
                             {% include 'partials/auction_card.twig' with { auction: auction } only %}
                             {% set so = sold_orders_by_item[auction.item_id] ?? null %}
                             {% if so and so.status == 'paid' %}
+                                {% if so.buyer_phone or so.buyer_email %}
+                                    <div class="mt-2 p-2 rounded-lg-aa bg-surface-aa small">
+                                        <div class="text-muted-aa mb-1"><i class="bi bi-person-lines-fill me-1"></i>Contact your buyer</div>
+                                        <div class="d-flex flex-column gap-1">
+                                            <div><strong>{{ so.buyer_first_name }} {{ so.buyer_last_name }}</strong></div>
+                                            {% if so.buyer_phone %}<a href="sms:{{ so.buyer_phone }}" class="text-decoration-none"><i class="bi bi-telephone me-1"></i>{{ so.buyer_phone }}</a>{% endif %}
+                                            {% if so.buyer_email %}<a href="mailto:{{ so.buyer_email }}" class="text-decoration-none text-truncate d-inline-block"><i class="bi bi-envelope me-1"></i>{{ so.buyer_email }}</a>{% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
                                 <div class="mt-2">
                                     {% if rated_orders[so.order_id] %}
                                         <span class="badge bg-success-subtle text-success-emphasis w-100 d-block py-1"><i class="bi bi-check-circle me-1"></i>Rated buyer</span>
@@ -273,6 +283,16 @@
                                     </div>
                                 {% endif %}
                             </div>
+                            {% if o.status == 'paid' and (o.seller_phone or o.seller_email) %}
+                                <div class="mt-2 p-2 rounded-lg-aa bg-surface-aa small">
+                                    <div class="text-muted-aa mb-1"><i class="bi bi-person-lines-fill me-1"></i>Contact your seller</div>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <span><strong>{{ o.seller_first_name }} {{ o.seller_last_name }}</strong> <a href="/users/{{ o.seller_id }}" class="text-muted-aa text-decoration-none">@{{ o.seller_username }}</a></span>
+                                        {% if o.seller_phone %}<a href="sms:{{ o.seller_phone }}" class="text-decoration-none"><i class="bi bi-telephone me-1"></i>{{ o.seller_phone }}</a>{% endif %}
+                                        {% if o.seller_email %}<a href="mailto:{{ o.seller_email }}" class="text-decoration-none"><i class="bi bi-envelope me-1"></i>{{ o.seller_email }}</a>{% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
                             {% if o.status == 'paid' and not rated_orders[o.order_id] %}
                                 <div class="collapse" id="rate-buyer-{{ o.order_id }}">
                                     {% include 'partials/rate_form.twig' with { order_id: o.order_id, label: 'Rate seller', csrf: csrf } only %}

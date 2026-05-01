@@ -66,14 +66,20 @@ final class Watchlist
 
     /**
      * Full auction-card rows for the user's watchlist, newest-saved first.
-     * Sold items are kept (the user wanted to watch them; final outcome is
-     * still useful information).
+     * Filters out:
+     *   - auctions whose status flipped to closed/cancelled (no longer
+     *     actionable),
+     *   - buyout-completed auctions (current_price >= buy_now_price with
+     *     bids present — same predicate Auction model uses for "sold"),
+     *   - auctions whose end_time has already passed.
+     * If anything matched the user's interest closes/sells, the watchlist
+     * row stays in the DB but stops appearing on the watchlist tab.
      *
      * @return array<int, array<string, mixed>>
      */
     public function forUser(int $userId): array
     {
-        $stmt = $this->db->prepare('
+        $stmt = $this->db->prepare("
             SELECT a.item_id, a.title, a.current_price, a.starting_price, a.buy_now_price,
                    a.reserve_price, a.end_time, a.featured, a.category_id,
                    (SELECT image_url FROM item_images
@@ -84,7 +90,12 @@ final class Watchlist
             FROM auction_items a
             JOIN watchlists w ON w.item_id = a.item_id
             WHERE w.user_id = :u
-            ORDER BY w.created_at DESC');
+              AND a.status = 'active'
+              AND a.end_time > NOW()
+              AND (a.buy_now_price IS NULL
+                   OR a.current_price < a.buy_now_price
+                   OR NOT EXISTS (SELECT 1 FROM bids b WHERE b.item_id = a.item_id))
+            ORDER BY w.created_at DESC");
         $stmt->execute(['u' => $userId]);
         return $stmt->fetchAll();
     }

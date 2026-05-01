@@ -104,20 +104,16 @@
                     <p class="text-muted-aa small mb-0">Nothing pending. All clear.</p>
                 {% else %}
                     <div class="d-flex flex-column gap-2">
-                        {% for r in pending %}
-                            <div class="d-flex align-items-center justify-content-between p-3 bg-warning-subtle border border-warning-subtle rounded-lg-aa">
+                        {% for r in pending|slice(0, 5) %}
+                            <a href="/admin?tab=reports" class="d-flex align-items-center justify-content-between p-3 bg-warning-subtle border border-warning-subtle rounded-lg-aa text-decoration-none text-dark">
                                 <div class="d-flex align-items-center gap-3">
                                     <i class="bi bi-exclamation-triangle text-warning-emphasis"></i>
                                     <div>
-                                        <div class="small">{{ r.name }}</div>
-                                        <div class="text-muted-aa" style="font-size: 0.75rem;">{{ r.reason }}</div>
+                                        <div class="small">{{ r.item_title|default(r.reported_username|default('—')) }}</div>
+                                        <div class="text-muted-aa" style="font-size: 0.75rem;">{{ r.reason }} — by @{{ r.reporter_username }}</div>
                                     </div>
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-success-subtle text-success-emphasis border" disabled><i class="bi bi-check-lg"></i></button>
-                                    <button class="btn btn-sm btn-light border" disabled><i class="bi bi-x-lg"></i></button>
-                                </div>
-                            </div>
+                            </a>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -224,37 +220,58 @@
         </div>
 
         <div class="tab-pane fade {{ active_tab == 'reports' ? 'show active' : '' }}" id="adm-reports" role="tabpanel">
-            <div class="alert alert-info small">
-                <i class="bi bi-info-circle me-1"></i>
-                Reports below are <strong>mock data</strong>. A real <code>reports</code> table + resolve/dismiss endpoints come in a later deliverable.
-            </div>
-            <div class="d-flex flex-column gap-2">
-                {% for r in reports %}
-                    {% set statusBadge = r.status == 'pending' ? 'warning-subtle text-warning-emphasis' :
-                                          r.status == 'resolved' ? 'success-subtle text-success-emphasis' :
-                                                                   'secondary-subtle text-secondary-emphasis' %}
-                    {% set typeBadge = r.type == 'user' ? 'info-subtle text-info-emphasis' : 'primary-subtle text-primary-emphasis' %}
-                    <div class="p-3 border rounded-xl {{ r.status == 'pending' ? 'border-warning-subtle bg-warning-subtle bg-opacity-25' : '' }}">
-                        <div class="d-flex justify-content-between align-items-start gap-3">
-                            <div>
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <span class="badge bg-{{ typeBadge }} text-capitalize">{{ r.type }}</span>
-                                    <span>{{ r.name }}</span>
-                                    <span class="badge bg-{{ statusBadge }} text-capitalize">{{ r.status }}</span>
+            {% if reports|length == 0 %}
+                <div class="text-center py-5 text-muted-aa">
+                    <i class="bi bi-flag fs-1 opacity-25 d-block mb-2"></i>
+                    <p>No reports yet. Listings and users that get flagged will appear here.</p>
+                </div>
+            {% else %}
+                <div class="d-flex flex-column gap-2">
+                    {% for r in reports %}
+                        {% set statusBadge = r.status == 'pending' ? 'warning-subtle text-warning-emphasis' :
+                                              r.status == 'resolved' ? 'success-subtle text-success-emphasis' :
+                                                                       'secondary-subtle text-secondary-emphasis' %}
+                        {% set typeBadge = r.type == 'user' ? 'info-subtle text-info-emphasis' : 'primary-subtle text-primary-emphasis' %}
+                        <div class="p-3 border rounded-xl {{ r.status == 'pending' ? 'border-warning-subtle bg-warning-subtle bg-opacity-25' : '' }}">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="badge bg-{{ typeBadge }} text-capitalize">{{ r.type }}</span>
+                                        {% if r.type == 'listing' and r.item_id %}
+                                            <a href="/auction/{{ r.item_id }}" class="text-decoration-none">{{ r.item_title|default('(deleted listing)') }}</a>
+                                        {% elseif r.type == 'user' and r.reported_user_id %}
+                                            <a href="/users/{{ r.reported_user_id }}" class="text-decoration-none">@{{ r.reported_username }}</a>
+                                        {% else %}
+                                            <span class="text-muted-aa">(removed)</span>
+                                        {% endif %}
+                                        <span class="badge bg-{{ statusBadge }} text-capitalize">{{ r.status }}</span>
+                                    </div>
+                                    <div class="small text-muted-aa mt-1"><strong>Reason:</strong> {{ r.reason }}</div>
+                                    {% if r.details %}
+                                        <div class="small mt-1" style="white-space: pre-wrap;">{{ r.details }}</div>
+                                    {% endif %}
+                                    <div class="small text-muted-aa" style="font-size: 0.7rem;">
+                                        Reported by @{{ r.reporter_username }} on {{ r.created_at|date('M j, Y g:i a') }}
+                                        {% if r.resolved_at %}· {{ r.status }} {{ r.resolved_at|date('M j, Y') }}{% endif %}
+                                    </div>
                                 </div>
-                                <div class="small text-muted-aa mt-1">{{ r.reason }}</div>
-                                <div class="small text-muted-aa" style="font-size: 0.7rem;">Reported by {{ r.reported_by }} on {{ r.created_at }}</div>
+                                {% if r.status == 'pending' and is_real_admin %}
+                                    <div class="d-flex gap-2 flex-shrink-0">
+                                        <form action="/report/{{ r.report_id }}/resolve" method="post" class="m-0">
+                                            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                            <button type="submit" class="btn btn-sm btn-success">Resolve</button>
+                                        </form>
+                                        <form action="/report/{{ r.report_id }}/dismiss" method="post" class="m-0">
+                                            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
                             </div>
-                            {% if r.status == 'pending' %}
-                                <div class="d-flex gap-2 flex-shrink-0">
-                                    <button class="btn btn-sm btn-success" disabled>Resolve</button>
-                                    <button class="btn btn-sm btn-outline-secondary" disabled>Dismiss</button>
-                                </div>
-                            {% endif %}
                         </div>
-                    </div>
-                {% endfor %}
-            </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
     </div>
