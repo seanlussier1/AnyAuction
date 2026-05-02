@@ -1,6 +1,6 @@
 {% extends 'layout.twig' %}
 {% block title %}
-    {% if active_category %}{{ active_category.name }}
+    {% if active_category %}{{ ('category.' ~ active_category.slug)|t }}
     {% elseif query %}{{ 'browse.results_for'|t({ query: query }) }}
     {% else %}{{ 'browse.title'|t }}
     {% endif %}
@@ -13,7 +13,7 @@
     <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
         <div>
             <h1 class="h3 mb-0">
-                {% if active_category %}{{ active_category.name }}
+                {% if active_category %}{{ ('category.' ~ active_category.slug)|t }}
                 {% elseif query %}{{ 'browse.results_for_quoted'|t({ query: query })|raw }}
                 {% else %}{{ 'browse.title'|t }}
                 {% endif %}
@@ -50,7 +50,7 @@
         {% for cat in categories %}
             <a href="/browse?category={{ cat.category_id }}{% if query %}&q={{ query }}{% endif %}"
                class="btn btn-sm rounded-pill {{ active_category and active_category.category_id == cat.category_id ? 'btn-primary' : 'btn-outline-secondary' }}">
-                <i class="bi bi-{{ cat.icon }} me-1"></i>{{ cat.name }}
+                <i class="bi bi-{{ cat.icon }} me-1"></i>{{ ('category.' ~ cat.slug)|t }}
             </a>
         {% endfor %}
     </div>

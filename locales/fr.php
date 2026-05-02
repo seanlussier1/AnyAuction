@@ -197,6 +197,16 @@ return [
     'browse.empty'               => 'Aucune enchère ne correspond à vos critères.',
     'browse.clear'               => 'Effacer les filtres',
 
+    // Catégories — mêmes clés que en.php, libellés français.
+    'category.art'               => 'Art',
+    'category.electronics'       => 'Électronique',
+    'category.fashion'           => 'Mode',
+    'category.home'              => 'Maison',
+    'category.jewelry'           => 'Bijoux',
+    'category.music'             => 'Musique',
+    'category.sports'            => 'Sports',
+    'category.vehicles'          => 'Véhicules',
+
     // Item conditions
     'condition.new'              => 'Neuf',
     'condition.like_new'         => 'Comme neuf',

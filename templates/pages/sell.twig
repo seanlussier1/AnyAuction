@@ -55,7 +55,7 @@
                     <select name="category_id" class="form-select" required>
                         <option value="">{{ 'sell.field.category.placeholder'|t }}</option>
                         {% for cat in categories %}
-                            <option value="{{ cat.category_id }}" {% if (old.category_id ?? '') == cat.category_id %}selected{% endif %}>{{ cat.name }}</option>
+                            <option value="{{ cat.category_id }}" {% if (old.category_id ?? '') == cat.category_id %}selected{% endif %}>{{ ('category.' ~ cat.slug)|t }}</option>
                         {% endfor %}
                     </select>
                 </div>

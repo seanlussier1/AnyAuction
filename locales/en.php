@@ -203,6 +203,18 @@ return [
     'browse.empty'               => 'No auctions found matching your criteria.',
     'browse.clear'               => 'Clear filters',
 
+    // Categories — keyed by slug, mirrored 1:1 in fr.php. The category
+    // name itself comes from the DB but is rendered through this map so
+    // we don't have to migrate the column.
+    'category.art'               => 'Art',
+    'category.electronics'       => 'Electronics',
+    'category.fashion'           => 'Fashion',
+    'category.home'              => 'Home',
+    'category.jewelry'           => 'Jewelry',
+    'category.music'             => 'Music',
+    'category.sports'            => 'Sports',
+    'category.vehicles'          => 'Vehicles',
+
     // Item conditions (used in browse filter buttons + sell-form select)
     'condition.new'              => 'New',
     'condition.like_new'         => 'Like New',

@@ -39,7 +39,7 @@
             <div class="col">
                 <a href="/browse?category={{ cat.category_id }}" class="aa-category">
                     <i class="bi bi-{{ cat.icon }}"></i>
-                    <span class="small">{{ cat.name }}</span>
+                    <span class="small">{{ ('category.' ~ cat.slug)|t }}</span>
                 </a>
             </div>
         {% endfor %}

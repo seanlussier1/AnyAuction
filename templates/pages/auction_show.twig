@@ -10,7 +10,7 @@
             <li class="breadcrumb-item"><a href="/browse" class="text-decoration-none text-muted-aa">{{ 'nav.browse'|t }}</a></li>
             <li class="breadcrumb-item">
                 <a href="/browse?category={{ auction.category_id }}" class="text-decoration-none text-muted-aa">
-                    {{ auction.category_name }}
+                    {{ ('category.' ~ auction.category_slug)|t }}
                 </a>
             </li>
             <li class="breadcrumb-item active text-truncate" aria-current="page">{{ auction.title }}</li>
@@ -215,7 +215,7 @@
                 <div class="col">
                     <div class="p-3 bg-surface-aa rounded-lg-aa">
                         <div class="text-muted-aa small">{{ 'auction.category'|t }}</div>
-                        <div>{{ auction.category_name }}</div>
+                        <div>{{ ('category.' ~ auction.category_slug)|t }}</div>
                     </div>
                 </div>
                 <div class="col">
