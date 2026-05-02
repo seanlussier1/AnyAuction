@@ -53,10 +53,14 @@
                     <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                     <input type="tel" name="phone" class="form-control"
                            autocomplete="tel"
-                           placeholder="(555) 123-4567" required autofocus
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           maxlength="11"
+                           data-aa-digits-only
+                           placeholder="5551234567" required autofocus
                            value="{{ old.phone|default('') }}">
                 </div>
-                <div class="form-text">US or Canada only. Standard message rates apply.</div>
+                <div class="form-text">US or Canada only — digits only. Standard message rates apply.</div>
             </div>
 
             <button type="submit" class="btn btn-primary py-2">
@@ -65,4 +69,15 @@
         </form>
     {% endif %}
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-aa-digits-only]').forEach(function (el) {
+            el.addEventListener('input', function () {
+                var stripped = el.value.replace(/[^0-9]/g, '');
+                if (stripped !== el.value) el.value = stripped;
+            });
+        });
+    });
+</script>
 {% endblock %}

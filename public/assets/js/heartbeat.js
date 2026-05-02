@@ -113,16 +113,10 @@
         }
     }
 
-    if (pendingListings && !pendingVersion) {
-        // Version banner takes priority (it implies a hard refresh anyway),
-        // so only render the listings banner when there's no version one.
-        if (onListingsPage) {
-            // Fresh /browse or / load — the listings update has been
-            // consumed by reloading.
-            sessionStorage.removeItem(LISTINGS_KEY);
-        } else {
-            showBanner('New listings or bids since you opened the site.', 'Refresh');
-        }
+    // Listings-changed banner removed — /browse now prepends new cards
+    // live, so the banner was redundant noise. Drop any stale flag.
+    if (pendingListings) {
+        sessionStorage.removeItem(LISTINGS_KEY);
     }
 
     const tick = async () => {
@@ -149,15 +143,9 @@
                 stop();
                 return;
             }
-            if (listingsChanged) {
-                sessionStorage.setItem(LISTINGS_KEY, String(data.listings_changed));
-                if (onListingsPage || !banner) {
-                    // On a listings page → user can immediately benefit
-                    // from refreshing. Off listings → still surface so
-                    // they know to head back.
-                    showBanner('New listings or bids since you opened this page.', 'Refresh');
-                }
-            }
+            // Listings-changed banner removed — live prepend on /browse
+            // covers it; the timestamp is still tracked for the heartbeat
+            // payload but no UI fires off it.
 
             // Live notification updates — bell badge + (when on the
             // notifications tab) prepend any new rows.

@@ -34,10 +34,14 @@
         <div>
             <label class="form-label small text-muted-aa">Phone</label>
             <input type="tel" name="phone" class="form-control" required
-                   placeholder="(555) 123-4567"
+                   placeholder="5551234567"
                    autocomplete="tel"
+                   inputmode="numeric"
+                   pattern="[0-9]*"
+                   maxlength="11"
+                   data-aa-digits-only
                    value="{{ old.phone|default('') }}">
-            <div class="form-text">US or Canada — we'll text you a verification code.</div>
+            <div class="form-text">US or Canada — digits only. We'll text you a verification code.</div>
         </div>
         <div>
             <label class="form-label small text-muted-aa">Password</label>
@@ -56,4 +60,18 @@
         Already have an account? <a href="/login" class="text-decoration-none">Sign in</a>
     </p>
 </div>
+
+{# Strip non-digits from any input flagged data-aa-digits-only — runs on
+   every keystroke + paste so even pasting "(555) 123-4567" lands as
+   "5551234567". Server-side PhoneNormalizer is still the source of truth. #}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-aa-digits-only]').forEach(function (el) {
+            el.addEventListener('input', function () {
+                var stripped = el.value.replace(/[^0-9]/g, '');
+                if (stripped !== el.value) el.value = stripped;
+            });
+        });
+    });
+</script>
 {% endblock %}
