@@ -16,6 +16,13 @@ use Slim\Views\Twig;
 
 final class AdminController
 {
+    /**
+     * Minimum seconds between expired-auction sweeps triggered by /admin
+     * page loads. Bursts of admin navigation shouldn't replay the same
+     * UPDATE on every request — once a minute is plenty for the badge UI.
+     */
+    private const SWEEP_THROTTLE_SECONDS = 60;
+
     public function __construct(
         private readonly PDO $db,
         private readonly Twig $view,
@@ -35,7 +42,11 @@ final class AdminController
         $users    = new User($this->db);
         $reports  = new Report($this->db);
 
-        $auctions->closeExpired();
+        $lastSweep = (int)($_SESSION['_admin_swept_at'] ?? 0);
+        if (time() - $lastSweep > self::SWEEP_THROTTLE_SECONDS) {
+            $auctions->closeExpired();
+            $_SESSION['_admin_swept_at'] = time();
+        }
 
         $activeTab  = (string)($request->getQueryParams()['tab'] ?? 'overview');
         $userSearch = trim((string)($request->getQueryParams()['uq'] ?? ''));

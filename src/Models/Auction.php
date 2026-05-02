@@ -156,10 +156,12 @@ final class Auction
 
     /**
      * Admin listings table view — every auction with minimal fields + seller name.
+     * Includes a derived `display_status` so the UI can render closed/expired
+     * auctions as "inactive" without relying on the row's actual status.
      *
      * @return array<int, array<string, mixed>>
      */
-        public function adminAll(): array
+    public function adminAll(): array
     {
         $stmt = $this->db->query("
             SELECT a.item_id, a.title, a.current_price, a.status, a.category_id,
@@ -185,27 +187,33 @@ final class Auction
         return $stmt->fetchAll();
     }
 
+    /**
+     * Flip every active auction whose end_time has passed to status='closed'.
+     * Returns the number of rows updated. Idempotent — safe to call repeatedly.
+     */
     public function closeExpired(): int
     {
         $stmt = $this->db->prepare(
             "UPDATE auction_items
-             SET status = 'closed'
-             WHERE status = 'active' AND end_time <= NOW()"
+                SET status = 'closed'
+              WHERE status = 'active' AND end_time <= NOW()"
         );
-
         $stmt->execute();
 
         return $stmt->rowCount();
     }
 
+    /**
+     * Admin moderation: cancel a listing so it disappears from the marketplace.
+     * Returns true if a row was actually flipped (false if already cancelled).
+     */
     public function adminRemove(int $itemId): bool
     {
         $stmt = $this->db->prepare(
             "UPDATE auction_items
-             SET status = 'cancelled'
-             WHERE item_id = :id AND status <> 'cancelled'"
+                SET status = 'cancelled'
+              WHERE item_id = :id AND status <> 'cancelled'"
         );
-
         $stmt->execute(['id' => $itemId]);
 
         return $stmt->rowCount() > 0;

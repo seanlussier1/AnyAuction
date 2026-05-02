@@ -22,7 +22,7 @@ final class AuthService
     /**
      * @return array<string, mixed>|null
      */
-       public function currentUser(): ?array
+    public function currentUser(): ?array
     {
         if (!$this->isLoggedIn()) {
             return null;
@@ -40,16 +40,20 @@ final class AuthService
 
         if (!$user) {
             unset($_SESSION['user_id']);
+            session_regenerate_id(true);
             return null;
         }
 
         if (($user['account_status'] ?? 'active') === 'banned') {
+            $this->flash->error('This account has been banned.');
             unset($_SESSION['user_id']);
+            session_regenerate_id(true);
             return null;
         }
 
         return $user;
     }
+
     /**
      * Attempts login by email + password. Returns true on success, false on failure.
      * On failure, pushes a flash error message.
@@ -65,8 +69,7 @@ final class AuthService
             return false;
         }
 
-        $this->completeLogin((int)$row['user_id']);
-        return true;
+        return $this->completeLogin((int)$row['user_id']);
     }
 
     /**
@@ -76,39 +79,52 @@ final class AuthService
      *
      * @return array<string, mixed>|null
      */
-   public function verifyPassword(string $email, string $password): ?array
-{
-    $stmt = $this->db->prepare(
-        'SELECT user_id, password_hash, phone, phone_verified_at, locale, account_status
-         FROM users
-         WHERE email = :email'
-    );
+    public function verifyPassword(string $email, string $password): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT user_id, password_hash, phone, phone_verified_at, locale, account_status
+               FROM users WHERE email = :email'
+        );
+        $stmt->execute(['email' => $email]);
+        $row = $stmt->fetch();
 
-    $stmt->execute(['email' => $email]);
-    $row = $stmt->fetch();
+        if (!$row || !password_verify($password, (string)$row['password_hash'])) {
+            $this->flash->error('Invalid email or password.');
+            return null;
+        }
 
-    if (!$row || !password_verify($password, (string)$row['password_hash'])) {
-        $this->flash->error('Invalid email or password.');
-        return null;
+        if (($row['account_status'] ?? 'active') === 'banned') {
+            $this->flash->error('This account has been banned.');
+            return null;
+        }
+
+        return $row;
     }
-
-    if (($row['account_status'] ?? 'active') === 'banned') {
-        $this->flash->error('This account has been banned.');
-        return null;
-    }
-
-    return $row;
-}
 
     /**
-     * Promote a verified user_id into a logged-in session. Regenerates
-     * the session id to prevent fixation. Used by the 2FA verify and
-     * phone-enrollment flows once a code has been confirmed.
+     * Promote a verified user_id into a logged-in session. Re-checks the
+     * account's status to refuse a session for a user who was banned in
+     * the window between password entry and 2FA / enrollment finalization.
+     * Returns true on success, false if the user is banned (the caller
+     * should redirect to /login). Regenerates the session id on success
+     * to prevent fixation.
      */
-    public function completeLogin(int $userId): void
+    public function completeLogin(int $userId): bool
     {
+        $stmt = $this->db->prepare(
+            'SELECT account_status FROM users WHERE user_id = :id'
+        );
+        $stmt->execute(['id' => $userId]);
+        $status = (string)($stmt->fetchColumn() ?: 'active');
+
+        if ($status === 'banned') {
+            $this->flash->error('This account has been banned.');
+            return false;
+        }
+
         session_regenerate_id(true);
         $_SESSION['user_id'] = $userId;
+        return true;
     }
 
     /**
