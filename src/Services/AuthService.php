@@ -22,22 +22,34 @@ final class AuthService
     /**
      * @return array<string, mixed>|null
      */
-    public function currentUser(): ?array
+       public function currentUser(): ?array
     {
         if (!$this->isLoggedIn()) {
             return null;
         }
 
         $stmt = $this->db->prepare(
-            'SELECT user_id, username, email, first_name, last_name, profile_picture, role, is_verified
-             FROM users WHERE user_id = :id'
+            'SELECT user_id, username, email, first_name, last_name, profile_picture,
+                    role, is_verified, account_status, warning_note, locale
+             FROM users
+             WHERE user_id = :id'
         );
+
         $stmt->execute(['id' => $_SESSION['user_id']]);
         $user = $stmt->fetch();
 
-        return $user ?: null;
-    }
+        if (!$user) {
+            unset($_SESSION['user_id']);
+            return null;
+        }
 
+        if (($user['account_status'] ?? 'active') === 'banned') {
+            unset($_SESSION['user_id']);
+            return null;
+        }
+
+        return $user;
+    }
     /**
      * Attempts login by email + password. Returns true on success, false on failure.
      * On failure, pushes a flash error message.
@@ -64,22 +76,29 @@ final class AuthService
      *
      * @return array<string, mixed>|null
      */
-    public function verifyPassword(string $email, string $password): ?array
-    {
-        $stmt = $this->db->prepare(
-            'SELECT user_id, password_hash, phone, phone_verified_at, locale
-               FROM users WHERE email = :email'
-        );
-        $stmt->execute(['email' => $email]);
-        $row = $stmt->fetch();
+   public function verifyPassword(string $email, string $password): ?array
+{
+    $stmt = $this->db->prepare(
+        'SELECT user_id, password_hash, phone, phone_verified_at, locale, account_status
+         FROM users
+         WHERE email = :email'
+    );
 
-        if (!$row || !password_verify($password, (string)$row['password_hash'])) {
-            $this->flash->error('Invalid email or password.');
-            return null;
-        }
+    $stmt->execute(['email' => $email]);
+    $row = $stmt->fetch();
 
-        return $row;
+    if (!$row || !password_verify($password, (string)$row['password_hash'])) {
+        $this->flash->error('Invalid email or password.');
+        return null;
     }
+
+    if (($row['account_status'] ?? 'active') === 'banned') {
+        $this->flash->error('This account has been banned.');
+        return null;
+    }
+
+    return $row;
+}
 
     /**
      * Promote a verified user_id into a logged-in session. Regenerates
