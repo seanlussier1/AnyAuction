@@ -159,11 +159,16 @@ final class Auction
      *
      * @return array<int, array<string, mixed>>
      */
-    public function adminAll(): array
+        public function adminAll(): array
     {
-        $stmt = $this->db->query('
+        $stmt = $this->db->query("
             SELECT a.item_id, a.title, a.current_price, a.status, a.category_id,
                    a.created_at, a.end_time,
+                   CASE
+                       WHEN a.status = 'active' AND a.end_time <= NOW() THEN 'inactive'
+                       WHEN a.status = 'closed' THEN 'inactive'
+                       ELSE a.status
+                   END AS display_status,
                    (SELECT COUNT(*) FROM bids WHERE item_id = a.item_id) AS total_bids,
                    u.username AS seller_username,
                    c.name     AS category_name,
@@ -174,8 +179,36 @@ final class Auction
             FROM auction_items a
             JOIN users      u ON u.user_id     = a.seller_id
             JOIN categories c ON c.category_id = a.category_id
-            ORDER BY a.created_at DESC');
+            ORDER BY a.created_at DESC
+        ");
+
         return $stmt->fetchAll();
+    }
+
+    public function closeExpired(): int
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE auction_items
+             SET status = 'closed'
+             WHERE status = 'active' AND end_time <= NOW()"
+        );
+
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
+
+    public function adminRemove(int $itemId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE auction_items
+             SET status = 'cancelled'
+             WHERE item_id = :id AND status <> 'cancelled'"
+        );
+
+        $stmt->execute(['id' => $itemId]);
+
+        return $stmt->rowCount() > 0;
     }
 
     /**
