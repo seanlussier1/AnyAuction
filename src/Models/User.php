@@ -12,56 +12,107 @@ final class User
     {
     }
 
-    /**
-     * @return array<string, mixed>|null
-     */
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT user_id, username, email, first_name, last_name, profile_picture, role, is_verified, created_at
-             FROM users WHERE user_id = :id'
+            'SELECT user_id, username, email, first_name, last_name, profile_picture, role,
+                    is_verified, account_status, warning_note, banned_at, created_at
+             FROM users
+             WHERE user_id = :id'
         );
+
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch();
+
         return $row ?: null;
     }
 
-    /**
-     * @return array<string, mixed>|null
-     */
     public function findByEmail(string $email): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM users WHERE email = :email');
         $stmt->execute(['email' => $email]);
         $row = $stmt->fetch();
+
         return $row ?: null;
     }
 
-    /**
-     * Admin users-table view. Optionally filter by a search string matched
-     * against username or email.
-     *
-     * @return array<int, array<string, mixed>>
-     */
     public function adminAll(?string $search = null): array
     {
         if ($search !== null && $search !== '') {
             $stmt = $this->db->prepare(
                 'SELECT user_id, username, email, first_name, last_name,
-                        profile_picture, role, is_verified, created_at
+                        profile_picture, role, is_verified, account_status, warning_note, banned_at, created_at
                  FROM users
                  WHERE username LIKE :q OR email LIKE :q
                  ORDER BY created_at DESC'
             );
+
             $stmt->execute(['q' => '%' . $search . '%']);
         } else {
             $stmt = $this->db->query(
                 'SELECT user_id, username, email, first_name, last_name,
-                        profile_picture, role, is_verified, created_at
-                 FROM users ORDER BY created_at DESC'
+                        profile_picture, role, is_verified, account_status, warning_note, banned_at, created_at
+                 FROM users
+                 ORDER BY created_at DESC'
             );
         }
+
         return $stmt->fetchAll();
+    }
+
+    public function warn(int $userId, string $note = 'Flagged by admin'): bool
+    {
+        $cleanNote = trim($note);
+        if ($cleanNote === '') {
+            $cleanNote = 'Flagged by admin';
+        }
+
+        $stmt = $this->db->prepare(
+            "UPDATE users
+             SET account_status = 'warned',
+                 warning_note = :note,
+                 banned_at = NULL
+             WHERE user_id = :id
+               AND role <> 'admin'"
+        );
+
+        $stmt->execute([
+            'id'   => $userId,
+            'note' => mb_substr($cleanNote, 0, 255),
+        ]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    public function ban(int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE users
+             SET account_status = 'banned',
+                 banned_at = NOW()
+             WHERE user_id = :id
+               AND role <> 'admin'"
+        );
+
+        $stmt->execute(['id' => $userId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    public function unban(int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE users
+             SET account_status = 'active',
+                 warning_note = NULL,
+                 banned_at = NULL
+             WHERE user_id = :id
+               AND role <> 'admin'"
+        );
+
+        $stmt->execute(['id' => $userId]);
+
+        return $stmt->rowCount() > 0;
     }
 
     public function countAll(): int
