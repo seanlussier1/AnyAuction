@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\AuthService;
+use App\Services\CloudinaryService;
 use App\Services\FlashService;
 use App\Services\StripeService;
 use App\Services\TwilioService;
@@ -79,6 +80,13 @@ return function (ContainerBuilder $builder): void {
             accountSid: (string)$c->get('settings')['twilio']['account_sid'],
             authToken:  (string)$c->get('settings')['twilio']['auth_token'],
             fromNumber: (string)$c->get('settings')['twilio']['from_number']
+        ),
+
+        CloudinaryService::class => fn (ContainerInterface $c) => new CloudinaryService(
+            cloudName: (string)$c->get('settings')['cloudinary']['cloud_name'],
+            apiKey:    (string)$c->get('settings')['cloudinary']['api_key'],
+            apiSecret: (string)$c->get('settings')['cloudinary']['api_secret'],
+            folder:    (string)$c->get('settings')['cloudinary']['folder']
         ),
     ]);
 };

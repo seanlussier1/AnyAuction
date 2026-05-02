@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Models\Category;
 use App\Services\AuthService;
+use App\Services\CloudinaryService;
 use App\Services\FlashService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -20,7 +21,8 @@ final class SellController
         private readonly PDO $db,
         private readonly Twig $view,
         private readonly AuthService $auth,
-        private readonly FlashService $flash
+        private readonly FlashService $flash,
+        private readonly CloudinaryService $cloudinary
     ) {
     }
 
@@ -185,6 +187,13 @@ final class SellController
     }
 
     /**
+     * Save uploaded photos to Cloudinary, store the secure URL in
+     * item_images. The local /tmp staging is only used for MIME detection
+     * and SDK input — files are deleted right after the upload finishes.
+     *
+     * If Cloudinary creds aren't configured (e.g. dev), we fall back to
+     * the legacy local-disk save so the flow still completes.
+     *
      * @param  array<string, mixed> $files
      * @return array{uploaded: int, skipped: int, reasons: array<int, string>}
      */
@@ -204,12 +213,15 @@ final class SellController
         ];
         $maxFileSize = 5 * 1024 * 1024; // 5MB
         $maxFiles    = 5;
+        $useCloudinary = $this->cloudinary->isConfigured();
 
-        $uploadDir = __DIR__ . '/../../public/assets/uploads/';
-        if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+        // Local staging dir doubles as the dev fallback target when
+        // Cloudinary creds aren't set. Created if missing.
+        $stagingDir = __DIR__ . '/../../public/assets/uploads/';
+        if (!is_dir($stagingDir) && !@mkdir($stagingDir, 0755, true) && !is_dir($stagingDir)) {
             throw new RuntimeException('Failed to create upload directory.');
         }
-        if (!is_writable($uploadDir)) {
+        if (!is_writable($stagingDir)) {
             throw new RuntimeException('Upload directory is not writable.');
         }
 
@@ -235,7 +247,7 @@ final class SellController
             }
 
             $base    = uniqid('auction_' . $auctionId . '_', true);
-            $tmpPath = $uploadDir . $base . '.tmp';
+            $tmpPath = $stagingDir . $base . '.tmp';
 
             try {
                 $uploadedFile->moveTo($tmpPath);
@@ -244,8 +256,9 @@ final class SellController
                 continue;
             }
 
-            // Server-side MIME detection — client-supplied media type is untrusted
-            // and on some browsers comes back as application/octet-stream for real images.
+            // Server-side MIME detection — client-supplied media type is
+            // untrusted and on some browsers comes back as
+            // application/octet-stream for real images.
             $finfo    = new \finfo(FILEINFO_MIME_TYPE);
             $detected = $finfo->file($tmpPath) ?: '';
             if (!isset($mimeToExt[$detected])) {
@@ -254,12 +267,29 @@ final class SellController
                 continue;
             }
 
-            $finalName = $base . '.' . $mimeToExt[$detected];
-            $finalPath = $uploadDir . $finalName;
-            if (!@rename($tmpPath, $finalPath)) {
+            $imageUrl = null;
+            $localFinalPath = null;
+
+            if ($useCloudinary) {
+                // Push to Cloudinary, then drop the local staging file.
+                $publicIdHint = sprintf('auction_%d_%d', $auctionId, $result['uploaded'] + 1);
+                $imageUrl = $this->cloudinary->upload($tmpPath, $publicIdHint);
                 @unlink($tmpPath);
-                $result['reasons'][] = 'could not save file';
-                continue;
+                if ($imageUrl === null) {
+                    $result['reasons'][] = 'cloudinary upload failed';
+                    continue;
+                }
+            } else {
+                // Dev fallback — keep the file on disk and store a
+                // relative URL the existing templates already understand.
+                $finalName = $base . '.' . $mimeToExt[$detected];
+                $localFinalPath = $stagingDir . $finalName;
+                if (!@rename($tmpPath, $localFinalPath)) {
+                    @unlink($tmpPath);
+                    $result['reasons'][] = 'could not save file';
+                    continue;
+                }
+                $imageUrl = '/assets/uploads/' . $finalName;
             }
 
             try {
@@ -268,12 +298,14 @@ final class SellController
                 );
                 $stmt->execute([
                     $auctionId,
-                    '/assets/uploads/' . $finalName,
+                    $imageUrl,
                     $result['uploaded'] === 0 ? 1 : 0,
                     $result['uploaded'],
                 ]);
             } catch (\PDOException $e) {
-                @unlink($finalPath);
+                if ($localFinalPath !== null) {
+                    @unlink($localFinalPath);
+                }
                 $result['reasons'][] = 'database error';
                 continue;
             }

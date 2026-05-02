@@ -35,6 +35,12 @@ return [
         'auth_token'  => $_ENV['TWILIO_AUTH_TOKEN']  ?? '',
         'from_number' => $_ENV['TWILIO_FROM_NUMBER'] ?? '',
     ],
+    'cloudinary' => [
+        'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'] ?? '',
+        'api_key'    => $_ENV['CLOUDINARY_API_KEY']    ?? '',
+        'api_secret' => $_ENV['CLOUDINARY_API_SECRET'] ?? '',
+        'folder'     => $_ENV['CLOUDINARY_FOLDER']     ?? 'anyauction/listings',
+    ],
     'paths' => [
         'root' => $rootPath,
         'templates' => $rootPath . '/templates',
