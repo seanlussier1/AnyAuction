@@ -5,23 +5,23 @@
 <section class="aa-hero">
     <div class="container position-relative">
         <div style="max-width: 40rem;">
-            <h1 class="mb-3">Auction <span class="amber">Anything.</span><br>Win Everything.</h1>
+            <h1 class="mb-3">{{ 'home.hero.title.lead'|t }}<br>{{ 'home.hero.title.win'|t }}</h1>
             <p class="lead text-white-50 mb-4" style="max-width: 32rem;">
-                The marketplace where buyers find amazing deals and sellers reach eager bidders.
-                Start bidding or list your items today.
+                {{ 'home.hero.subtitle'|t }}
             </p>
             <div class="d-flex flex-wrap gap-2">
                 <a href="/browse" class="btn btn-amber px-4 py-2">
-                    Start Browsing <i class="bi bi-arrow-right ms-1"></i>
+                    {{ 'home.hero.start_browsing'|t }} <i class="bi bi-arrow-right ms-1"></i>
                 </a>
-                <a href="/sell" class="btn btn-outline-light px-4 py-2">Sell an Item</a>
+                <a href="/sell" class="btn btn-outline-light px-4 py-2">{{ 'home.hero.sell_item'|t }}</a>
             </div>
 
+            {% set _stat_keys = ['home.stats.active', 'home.stats.buyers', 'home.stats.sold'] %}
             <div class="aa-hero-stats row g-4 mt-4" style="max-width: 24rem;">
                 {% for stat in stats %}
                     <div class="col-4">
                         <p>{{ stat.value }}</p>
-                        <p>{{ stat.label }}</p>
+                        <p>{{ _stat_keys[loop.index0] is defined ? (_stat_keys[loop.index0]|t) : stat.label }}</p>
                     </div>
                 {% endfor %}
             </div>
@@ -31,8 +31,8 @@
 
 <section class="container py-5">
     <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="h4 mb-0">Browse Categories</h2>
-        <a href="/browse" class="small text-decoration-none">View All <i class="bi bi-arrow-right"></i></a>
+        <h2 class="h4 mb-0">{{ 'home.categories'|t }}</h2>
+        <a href="/browse" class="small text-decoration-none">{{ 'home.view_all'|t }} <i class="bi bi-arrow-right"></i></a>
     </div>
     <div class="row row-cols-2 row-cols-sm-4 row-cols-lg-8 g-3">
         {% for cat in categories %}
@@ -49,8 +49,8 @@
 {% if featured|length > 0 %}
 <section class="container py-4">
     <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="h4 mb-0">Featured Auctions</h2>
-        <a href="/browse" class="small text-decoration-none">See All <i class="bi bi-arrow-right"></i></a>
+        <h2 class="h4 mb-0">{{ 'home.featured'|t }}</h2>
+        <a href="/browse" class="small text-decoration-none">{{ 'home.see_all'|t }} <i class="bi bi-arrow-right"></i></a>
     </div>
     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
         {% for auction in featured %}
@@ -65,7 +65,7 @@
 {% if ending_soon|length > 0 %}
 <section class="container py-4">
     <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="h4 mb-0"><i class="bi bi-clock text-danger me-2"></i>Ending Soon</h2>
+        <h2 class="h4 mb-0"><i class="bi bi-clock text-danger me-2"></i>{{ 'home.ending_soon'|t }}</h2>
     </div>
     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
         {% for auction in ending_soon %}

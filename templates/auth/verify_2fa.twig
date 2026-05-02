@@ -1,5 +1,5 @@
 {% extends 'layout.twig' %}
-{% block title %}Verify your code — AnyAuction{% endblock %}
+{% block title %}{{ 'auth.2fa.page_title'|t }} — AnyAuction{% endblock %}
 
 {% block content %}
 <div class="container py-5" style="max-width: 28rem;">
@@ -8,16 +8,16 @@
         <span class="fs-5">AnyAuction</span>
     </a>
 
-    <h1 class="h3 mb-1">Enter your code</h1>
+    <h1 class="h3 mb-1">{{ 'auth.2fa.title'|t }}</h1>
     <p class="text-muted-aa mb-4">
-        We texted a 6-digit code to your phone. It expires in 10 minutes.
+        {{ 'auth.2fa.subtitle'|t }}
     </p>
 
     <form method="post" action="/verify-2fa" class="d-flex flex-column gap-3">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 
         <div>
-            <label class="form-label small text-muted-aa">6-digit code</label>
+            <label class="form-label small text-muted-aa">{{ 'auth.2fa.code'|t }}</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
                 <input type="text" name="code" class="form-control"
@@ -28,19 +28,19 @@
         </div>
 
         <button type="submit" class="btn btn-primary py-2">
-            Verify and sign in <i class="bi bi-arrow-right ms-1"></i>
+            {{ 'auth.2fa.submit'|t }} <i class="bi bi-arrow-right ms-1"></i>
         </button>
     </form>
 
     <form method="post" action="/verify-2fa/resend" class="mt-3">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
         <button type="submit" class="btn btn-link text-decoration-none p-0 small">
-            Didn't get it? Resend code
+            {{ 'auth.2fa.didnt_get_it'|t }}
         </button>
     </form>
 
     <p class="text-center small text-muted-aa mt-4">
-        <a href="/login" class="text-decoration-none">Back to sign in</a>
+        <a href="/login" class="text-decoration-none">{{ 'auth.back_to_signin'|t }}</a>
     </p>
 </div>
 {% endblock %}

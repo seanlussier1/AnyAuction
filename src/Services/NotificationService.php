@@ -20,6 +20,11 @@ use PDO;
  *
  * The bidder/buyer themselves should be excluded from the fan-out — pass
  * their user id via `$context['actor_id']`.
+ *
+ * Locale handling: every user-facing string is keyed through Translator
+ * with the RECIPIENT's locale (looked up from users.locale), not the
+ * request's. A French buyer outbid by an English seller still gets a
+ * French SMS / DB notification.
  */
 final class NotificationService
 {
@@ -30,7 +35,8 @@ final class NotificationService
 
     public function __construct(
         private readonly PDO $db,
-        private readonly TwilioService $twilio
+        private readonly TwilioService $twilio,
+        private readonly Translator $translator
     ) {
     }
 
@@ -56,16 +62,39 @@ final class NotificationService
         }
 
         $amount = isset($context['amount']) ? (float)$context['amount'] : 0.0;
-        [$ntype, $heading, $body] = match ($event) {
-            'bid'    => ['watchlist_bid',    'New bid on a watched item',    sprintf("Someone bid \$%s on '%s'.", number_format($amount, 2), $title)],
-            'buyout' => ['watchlist_buyout', 'Watched item was bought out',  sprintf("'%s' was bought out for \$%s.", $title, number_format($amount, 2))],
-            default  => ['watchlist_event',  'Watched item update',          sprintf("There's an update on '%s'.", $title)],
+        $amountFmt = number_format($amount, 2);
+
+        $titleKey = match ($event) {
+            'bid'    => 'notif.title.watchlist_bid',
+            'buyout' => 'notif.title.watchlist_buyout',
+            default  => null,
         };
-        $href = '/auction/' . $itemId;
+        $bodyKey = match ($event) {
+            'bid'    => 'notif.body.watchlist_bid',
+            'buyout' => 'notif.body.watchlist_buyout',
+            default  => null,
+        };
+        if ($titleKey === null || $bodyKey === null) {
+            return; // unknown event — skip rather than emit a half-formed row
+        }
+
+        $ntype = $event === 'bid' ? 'watchlist_bid' : 'watchlist_buyout';
+        $href  = '/auction/' . $itemId;
+
+        // Batch-load locales for all watchers in a single query rather than
+        // N+1 lookups. Keeps the fan-out cheap.
+        $locales = $this->lookupLocales($watchers);
 
         $notif = new Notification($this->db);
         foreach ($watchers as $uid) {
-            $notif->create((int)$uid, $ntype, $heading, $body, $itemId, $href);
+            $uid = (int)$uid;
+            $locale = $locales[$uid] ?? 'en';
+            $heading = $this->translator->trans($titleKey, [], $locale);
+            $body    = $this->translator->trans($bodyKey, [
+                'amount' => $amountFmt,
+                'title'  => $title,
+            ], $locale);
+            $notif->create($uid, $ntype, $heading, $body, $itemId, $href);
         }
 
         // SMS path is intentionally still a no-op for watchers — too noisy.
@@ -100,18 +129,21 @@ final class NotificationService
 
         if ($event === 'snipe_extension') {
             $extMin = (int)round(((int)($context['extension_seconds'] ?? 300)) / 60);
-            $heading = 'Auction extended';
-            $body    = sprintf(
-                "A last-minute bid extended '%s' by %d more minutes. Get back in the action.",
-                $title,
-                $extMin
-            );
-            $ntype = 'snipe_extended';
-            $href  = '/auction/' . $itemId;
+            $ntype  = 'snipe_extended';
+            $href   = '/auction/' . $itemId;
+
+            $locales = $this->lookupLocales($bidders);
 
             $notif = new Notification($this->db);
             foreach ($bidders as $uid) {
-                $notif->create((int)$uid, $ntype, $heading, $body, $itemId, $href);
+                $uid = (int)$uid;
+                $locale = $locales[$uid] ?? 'en';
+                $heading = $this->translator->trans('notif.title.snipe_extended', [], $locale);
+                $body    = $this->translator->trans('notif.body.snipe_extended', [
+                    'title'   => $title,
+                    'minutes' => $extMin,
+                ], $locale);
+                $notif->create($uid, $ntype, $heading, $body, $itemId, $href);
             }
         }
 
@@ -131,12 +163,18 @@ final class NotificationService
             return;
         }
 
+        $locale    = $this->normalizeLocale((string)($user['locale'] ?? 'en'));
+        $amountFmt = number_format($newAmount, 2);
+
         // Always record the in-site notification, regardless of SMS prefs.
         (new Notification($this->db))->create(
             $previousBidderId,
             'outbid',
-            'You were outbid',
-            sprintf("Someone bid \$%s on '%s'. You can place a higher bid to take the lead.", number_format($newAmount, 2), $title),
+            $this->translator->trans('notif.title.outbid', [], $locale),
+            $this->translator->trans('notif.body.outbid', [
+                'amount' => $amountFmt,
+                'title'  => $title,
+            ], $locale),
             $itemId,
             '/auction/' . $itemId
         );
@@ -158,11 +196,10 @@ final class NotificationService
 
         $this->twilio->sendSms(
             $phone,
-            sprintf(
-                "AnyAuction: a buyer outbid you on '%s' at $%s. Reply with a new bid amount or STOP to opt out.",
-                $title,
-                number_format($newAmount, 2)
-            )
+            $this->translator->trans('sms.outbid', [
+                'title'  => $title,
+                'amount' => $amountFmt,
+            ], $locale)
         );
     }
 
@@ -178,11 +215,17 @@ final class NotificationService
             return;
         }
 
+        $locale    = $this->normalizeLocale((string)($user['locale'] ?? 'en'));
+        $amountFmt = number_format($finalAmount, 2);
+
         (new Notification($this->db))->create(
             $previousBidderId,
             'auction_lost',
-            'Auction bought out',
-            sprintf("'%s' was bought out for \$%s. The auction is now closed.", $title, number_format($finalAmount, 2)),
+            $this->translator->trans('notif.title.auction_lost', [], $locale),
+            $this->translator->trans('notif.body.auction_lost', [
+                'title'  => $title,
+                'amount' => $amountFmt,
+            ], $locale),
             $itemId,
             '/auction/' . $itemId
         );
@@ -198,11 +241,10 @@ final class NotificationService
 
         $this->twilio->sendSms(
             $phone,
-            sprintf(
-                "AnyAuction: '%s' was bought out for $%s. The auction is closed — better luck next time! Reply STOP to opt out.",
-                $title,
-                number_format($finalAmount, 2)
-            )
+            $this->translator->trans('sms.auction_lost', [
+                'title'  => $title,
+                'amount' => $amountFmt,
+            ], $locale)
         );
     }
 
@@ -218,11 +260,17 @@ final class NotificationService
             return;
         }
 
+        $locale    = $this->normalizeLocale((string)($user['locale'] ?? 'en'));
+        $amountFmt = number_format($winningBid, 2);
+
         (new Notification($this->db))->create(
             $winnerId,
             'auction_won',
-            'You won an auction!',
-            sprintf("Congrats — '%s' is yours at \$%s. Check your profile for next steps.", $title, number_format($winningBid, 2)),
+            $this->translator->trans('notif.title.auction_won', [], $locale),
+            $this->translator->trans('notif.body.auction_won', [
+                'title'  => $title,
+                'amount' => $amountFmt,
+            ], $locale),
             $itemId,
             '/auction/' . $itemId
         );
@@ -236,11 +284,10 @@ final class NotificationService
 
         $this->twilio->sendSms(
             $phone,
-            sprintf(
-                "AnyAuction: you won '%s' at $%s! Check your profile for next steps. Reply STOP to opt out.",
-                $title,
-                number_format($winningBid, 2)
-            )
+            $this->translator->trans('sms.auction_won', [
+                'title'  => $title,
+                'amount' => $amountFmt,
+            ], $locale)
         );
     }
 
@@ -258,11 +305,16 @@ final class NotificationService
             return;
         }
 
+        $locale = $this->lookupLocale($sellerId);
+
         (new Notification($this->db))->create(
             $sellerId,
             'bid_received',
-            'New bid on your listing',
-            sprintf("A buyer bid \$%s on '%s'.", number_format($amount, 2), $title),
+            $this->translator->trans('notif.title.bid_received', [], $locale),
+            $this->translator->trans('notif.body.bid_received', [
+                'amount' => number_format($amount, 2),
+                'title'  => $title,
+            ], $locale),
             $itemId,
             '/auction/' . $itemId
         );
@@ -278,11 +330,16 @@ final class NotificationService
             return;
         }
 
+        $locale = $this->lookupLocale($sellerId);
+
         (new Notification($this->db))->create(
             $sellerId,
             'item_sold',
-            'Your item sold',
-            sprintf("'%s' was bought out for \$%s. Watch your dashboard for the payout.", $title, number_format($finalAmount, 2)),
+            $this->translator->trans('notif.title.item_sold', [], $locale),
+            $this->translator->trans('notif.body.item_sold', [
+                'title'  => $title,
+                'amount' => number_format($finalAmount, 2),
+            ], $locale),
             $itemId,
             '/auction/' . $itemId
         );
@@ -298,11 +355,16 @@ final class NotificationService
             return;
         }
 
+        $locale = $this->lookupLocale($sellerId);
+
         (new Notification($this->db))->create(
             $sellerId,
             'order_paid',
-            'Payment received',
-            sprintf("Buyer paid \$%s for '%s'. Time to ship!", number_format($amount, 2), $title),
+            $this->translator->trans('notif.title.order_paid', [], $locale),
+            $this->translator->trans('notif.body.order_paid', [
+                'amount' => number_format($amount, 2),
+                'title'  => $title,
+            ], $locale),
             $itemId,
             '/profile'
         );
@@ -313,11 +375,15 @@ final class NotificationService
      */
     public function notifyWelcome(int $userId, string $firstName): void
     {
+        $locale = $this->lookupLocale($userId);
+
         (new Notification($this->db))->create(
             $userId,
             'welcome',
-            'Welcome to AnyAuction!',
-            sprintf("Hey %s — your account is ready. Add items to your watchlist or start a listing whenever you're ready.", $firstName),
+            $this->translator->trans('notif.title.welcome', [], $locale),
+            $this->translator->trans('notif.body.welcome', [
+                'first_name' => $firstName,
+            ], $locale),
             null,
             '/browse'
         );
@@ -326,13 +392,56 @@ final class NotificationService
     private function lookupUser(int $userId): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT phone, phone_verified_at, sms_opt_out
+            'SELECT phone, phone_verified_at, sms_opt_out, locale
              FROM users
              WHERE user_id = :id'
         );
         $stmt->execute(['id' => $userId]);
         $row = $stmt->fetch();
         return $row ?: null;
+    }
+
+    /**
+     * Single-user locale lookup — one row, one column. Used by the
+     * site-only seller-side notifications where we don't need phone/opt-out.
+     */
+    private function lookupLocale(int $userId): string
+    {
+        $stmt = $this->db->prepare('SELECT locale FROM users WHERE user_id = :id');
+        $stmt->execute(['id' => $userId]);
+        $code = (string)$stmt->fetchColumn();
+        return $this->normalizeLocale($code);
+    }
+
+    /**
+     * Batch locale lookup keyed by user_id. Avoids N+1 queries when fanning
+     * out to a list of watchers / bidders.
+     *
+     * @param  array<int, int|string> $userIds
+     * @return array<int, string>
+     */
+    private function lookupLocales(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+        $ids = array_values(array_unique(array_map('intval', $userIds)));
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare(
+            "SELECT user_id, locale FROM users WHERE user_id IN ($placeholders)"
+        );
+        $stmt->execute($ids);
+        $out = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $out[(int)$row['user_id']] = $this->normalizeLocale((string)$row['locale']);
+        }
+        return $out;
+    }
+
+    private function normalizeLocale(string $code): string
+    {
+        $code = $code === '' ? 'en' : $code;
+        return $this->translator->normalize($code);
     }
 
     private function lookupTitle(int $itemId): string

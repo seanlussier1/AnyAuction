@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Models\Watchlist;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\Translator;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -18,14 +19,15 @@ final class WatchlistController
         private readonly PDO $db,
         private readonly Twig $view,
         private readonly AuthService $auth,
-        private readonly FlashService $flash
+        private readonly FlashService $flash,
+        private readonly Translator $translator
     ) {
     }
 
     public function index(Request $request, Response $response): Response
     {
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Log in to see your watchlist.');
+            $this->flash->error($this->translator->trans('auth.required.watchlist'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -50,7 +52,7 @@ final class WatchlistController
             if ($wantsJson) {
                 return $this->json($response->withStatus(401), ['error' => 'login_required']);
             }
-            $this->flash->error('Log in to add items to your watchlist.');
+            $this->flash->error($this->translator->trans('auth.required.watchlist'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -59,7 +61,7 @@ final class WatchlistController
             if ($wantsJson) {
                 return $this->json($response->withStatus(400), ['error' => 'csrf']);
             }
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
         }
 

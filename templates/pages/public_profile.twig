@@ -24,7 +24,7 @@
                         <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle text-capitalize">{{ profile_user.role }}</span>
                     </div>
                     <div class="small text-white-50">@{{ profile_user.username }}</div>
-                    <div class="small text-white-50 opacity-75">Member since {{ profile_user.created_at|date('F Y') }}</div>
+                    <div class="small text-white-50 opacity-75">{{ 'profile.member_since'|t({ date: profile_user.created_at|date('F Y') }) }}</div>
                 </div>
             </div>
         </div>
@@ -32,26 +32,33 @@
         <div class="row row-cols-2 row-cols-md-4 g-3 mt-3">
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.rating }}</div>
-                <div class="small text-white-50"><i class="bi bi-star-fill"></i> Rating</div>
+                <div class="small text-white-50"><i class="bi bi-star-fill"></i> {{ 'profile.stat.rating'|t }}</div>
             </div>
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.reviews }}</div>
-                <div class="small text-white-50">Reviews</div>
+                <div class="small text-white-50">{{ 'profile.stat.reviews'|t }}</div>
             </div>
             <div class="col">
                 <div class="fs-5 text-amber">{{ listings|length }}</div>
-                <div class="small text-white-50">Listings</div>
+                <div class="small text-white-50">{{ 'public_profile.stat.listings'|t }}</div>
             </div>
         </div>
     </div>
 
     {% if rateable_orders|length > 0 %}
         <div class="p-3 mb-4 rounded-lg-aa border border-warning-subtle bg-warning-subtle">
-            <h2 class="h6 mb-2"><i class="bi bi-star me-1 text-warning"></i>Leave a rating for {{ profile_user.first_name }}</h2>
-            <p class="small text-muted-aa mb-3">You have {{ rateable_orders|length }} unrated transaction{{ rateable_orders|length == 1 ? '' : 's' }} with this user. Reviews can be left at any time.</p>
+            <h2 class="h6 mb-2"><i class="bi bi-star me-1 text-warning"></i>{{ 'public_profile.rate.heading'|t({ name: profile_user.first_name }) }}</h2>
+            <p class="small text-muted-aa mb-3">
+                {% if rateable_orders|length == 1 %}
+                    {{ 'public_profile.rate.intro_one'|t({ count: rateable_orders|length }) }}
+                {% else %}
+                    {{ 'public_profile.rate.intro_many'|t({ count: rateable_orders|length }) }}
+                {% endif %}
+            </p>
             <div class="d-flex flex-column gap-2">
                 {% for o in rateable_orders %}
-                    {% set label = o.rater_role == 'buyer' ? 'Rate seller' : 'Rate buyer' %}
+                    {% set label_key = o.rater_role == 'buyer' ? 'rating.label.rate_seller' : 'rating.label.rate_buyer' %}
+                    {% set label = label_key|t %}
                     <div class="p-3 rounded-lg-aa border bg-white">
                         <div class="d-flex align-items-center gap-3">
                             {% if o.primary_image %}
@@ -64,9 +71,9 @@
                                     <div class="fw-medium text-truncate">{{ o.title }}</div>
                                 </a>
                                 <div class="small text-muted-aa">
-                                    {{ o.rater_role == 'buyer' ? 'You bought this' : 'You sold this' }}
-                                    · Order #{{ o.order_id }}
-                                    {% if o.paid_at %} · paid {{ o.paid_at|date('M j, Y') }}{% endif %}
+                                    {{ o.rater_role == 'buyer' ? ('public_profile.rate.you_bought'|t) : ('public_profile.rate.you_sold'|t) }}
+                                    · {{ 'profile.orders.order_num'|t({ id: o.order_id }) }}
+                                    {% if o.paid_at %} · {{ 'public_profile.rate.paid_on'|t({ date: o.paid_at|date('M j, Y') }) }}{% endif %}
                                 </div>
                             </div>
                             <button class="btn btn-sm btn-outline-warning flex-shrink-0" type="button"
@@ -86,14 +93,14 @@
 
     <div class="row g-4">
         <div class="col-lg-7">
-            <h2 class="h5 mb-3">Reviews</h2>
+            <h2 class="h5 mb-3">{{ 'public_profile.reviews_heading'|t }}</h2>
             {% include 'partials/reviews_panel.twig' with { stats: stats, reviews: reviews } only %}
         </div>
 
         <div class="col-lg-5">
-            <h2 class="h5 mb-3">Listings by {{ profile_user.first_name }}</h2>
+            <h2 class="h5 mb-3">{{ 'public_profile.listings_by'|t({ name: profile_user.first_name }) }}</h2>
             {% if listings|length == 0 %}
-                <p class="text-muted-aa small">No listings yet.</p>
+                <p class="text-muted-aa small">{{ 'public_profile.no_listings'|t }}</p>
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 g-3">
                     {% for auction in listings %}

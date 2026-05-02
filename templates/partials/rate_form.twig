@@ -1,8 +1,10 @@
-{# Inline rating form. Expects { order_id, label, csrf } in scope. #}
+{# Inline rating form. Expects { order_id, label, csrf } in scope.
+   `label` is already a translated string passed by the caller (e.g.
+   `'rating.label.rate_seller'|t`). Fixed strings inside use the |t filter. #}
 <form action="/rate/{{ order_id }}" method="post" class="border rounded-lg-aa p-3 mt-2 bg-surface-aa">
     <input type="hidden" name="_csrf" value="{{ csrf }}">
     <div class="mb-2">
-        <label class="form-label small mb-1">{{ label }} — score</label>
+        <label class="form-label small mb-1">{{ 'rating.label.score'|t({ label: label }) }}</label>
         <div class="d-flex gap-2 flex-wrap">
             {% for s in 1..5 %}
                 <label class="d-inline-flex align-items-center gap-1 small">
@@ -13,9 +15,9 @@
         </div>
     </div>
     <div class="mb-2">
-        <label class="form-label small mb-1">Comment <span class="text-muted-aa">(optional)</span></label>
+        <label class="form-label small mb-1">{{ 'rating.comment'|t }} <span class="text-muted-aa">{{ 'rating.comment.optional'|t }}</span></label>
         <textarea name="comment" rows="2" maxlength="1000" class="form-control form-control-sm"
-                  placeholder="How was the experience?"></textarea>
+                  placeholder="{{ 'rating.comment.placeholder'|t }}"></textarea>
     </div>
-    <button type="submit" class="btn btn-primary btn-sm">Submit rating</button>
+    <button type="submit" class="btn btn-primary btn-sm">{{ 'rating.submit'|t }}</button>
 </form>

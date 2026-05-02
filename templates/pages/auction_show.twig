@@ -7,7 +7,7 @@
 
     <nav aria-label="breadcrumb" class="small text-muted-aa">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/browse" class="text-decoration-none text-muted-aa">Browse</a></li>
+            <li class="breadcrumb-item"><a href="/browse" class="text-decoration-none text-muted-aa">{{ 'nav.browse'|t }}</a></li>
             <li class="breadcrumb-item">
                 <a href="/browse?category={{ auction.category_id }}" class="text-decoration-none text-muted-aa">
                     {{ auction.category_name }}
@@ -35,16 +35,16 @@
                                 {% for img in images %}
                                     <button type="button" data-bs-target="#auctionGallery" data-bs-slide-to="{{ loop.index0 }}"
                                             {% if loop.first %}class="active" aria-current="true"{% endif %}
-                                            aria-label="Photo {{ loop.index }}"></button>
+                                            aria-label="{{ 'auction.photo_n'|t({ n: loop.index }) }}"></button>
                                 {% endfor %}
                             </div>
                             <button class="carousel-control-prev" type="button" data-bs-target="#auctionGallery" data-bs-slide="prev">
                                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                <span class="visually-hidden">Previous</span>
+                                <span class="visually-hidden">{{ 'auction.gallery.previous'|t }}</span>
                             </button>
                             <button class="carousel-control-next" type="button" data-bs-target="#auctionGallery" data-bs-slide="next">
                                 <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                <span class="visually-hidden">Next</span>
+                                <span class="visually-hidden">{{ 'auction.gallery.next'|t }}</span>
                             </button>
                         {% endif %}
                     </div>
@@ -54,7 +54,7 @@
                     </div>
                 {% endif %}
                 {% if auction.featured %}
-                    <span class="aa-badge aa-badge-featured">Featured</span>
+                    <span class="aa-badge aa-badge-featured">{{ 'auction.featured'|t }}</span>
                 {% endif %}
                 {% if auction.status != 'active' %}
                     <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
@@ -69,12 +69,18 @@
             <div>
                 <h1 class="h3 mb-2">{{ auction.title }}</h1>
                 <div class="d-flex flex-wrap gap-3 small text-muted-aa">
-                    <span>{{ auction.total_bids }} bid{{ auction.total_bids == 1 ? '' : 's' }}</span>
+                    <span>
+                        {% if auction.total_bids == 1 %}
+                            {{ 'auction.bids_one'|t({ count: auction.total_bids }) }}
+                        {% else %}
+                            {{ 'auction.bids_many'|t({ count: auction.total_bids }) }}
+                        {% endif %}
+                    </span>
                     <span>•</span>
                     <span>{{ auction.condition }}</span>
                     {% if auction.seller_is_verified %}
                         <span>•</span>
-                        <span><i class="bi bi-patch-check-fill text-primary me-1"></i>Verified seller</span>
+                        <span><i class="bi bi-patch-check-fill text-primary me-1"></i>{{ 'auction.verified_seller'|t }}</span>
                     {% endif %}
                 </div>
             </div>
@@ -86,32 +92,32 @@
                 {% if is_sold %}
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <i class="bi bi-check-circle-fill text-emerald fs-4"></i>
-                        <h5 class="mb-0">Item Sold</h5>
+                        <h5 class="mb-0">{{ 'auction.item_sold'|t }}</h5>
                     </div>
-                    <div class="small text-muted-aa">Final price</div>
+                    <div class="small text-muted-aa">{{ 'auction.final_price'|t }}</div>
                     <div class="display-6 text-emerald mb-0">${{ auction.buy_now_price|number_format(2) }}</div>
                     <div class="mt-2 small text-muted-aa">
-                        Sold to <strong>@{{ bids[0].username }}</strong> on {{ bids[0].bid_time|date('M j, Y') }}.
+                        {{ 'auction.sold_to'|t({ username: bids[0].username, date: bids[0].bid_time|date('M j, Y') })|raw }}
                     </div>
                 {% else %}
                     <div class="d-flex align-items-end justify-content-between">
                         <div>
-                            <div class="small text-muted-aa">Current Bid</div>
+                            <div class="small text-muted-aa">{{ 'auction.current_bid'|t }}</div>
                             <div class="display-6 text-emerald mb-0">${{ auction.current_price|number_format(2) }}</div>
                         </div>
                         <div class="text-end">
-                            <div class="small text-muted-aa">Starting Price</div>
+                            <div class="small text-muted-aa">{{ 'auction.starting_price'|t }}</div>
                             <div>${{ auction.starting_price|number_format(2) }}</div>
                         </div>
                     </div>
 
                     {% if auction.reserve_price and auction.current_price < auction.reserve_price %}
-                        <div class="mt-2 small"><span class="badge bg-warning-subtle text-warning-emphasis">Reserve price not yet met</span></div>
+                        <div class="mt-2 small"><span class="badge bg-warning-subtle text-warning-emphasis">{{ 'auction.reserve_price_not_met'|t }}</span></div>
                     {% endif %}
 
                     <div class="mt-3 small">
                         <i class="bi bi-clock me-1 text-danger"></i>
-                        Ends in <strong>{{ auction.end_time|aa_timeleft }}</strong>
+                        {{ 'auction.ends_in_strong'|t({ time: auction.end_time|aa_timeleft })|raw }}
                         <span class="text-muted-aa">({{ auction.end_time }})</span>
                     </div>
                 {% endif %}
@@ -122,22 +128,26 @@
                     {% if order_paid %}
                         <div class="alert alert-success mb-0">
                             <i class="bi bi-check-circle-fill me-1"></i>
-                            You paid for this item on {{ order_paid_at|date('M j, Y g:i a') }}.
-                            <a href="/profile" class="text-decoration-none">View order</a>
+                            {{ 'auction.you_paid_on'|t({ date: order_paid_at|date('M j, Y g:i a') }) }}
+                            <a href="/profile" class="text-decoration-none">{{ 'auction.view_order'|t }}</a>
                         </div>
                     {% else %}
                         <form action="/checkout/start/{{ auction.item_id }}" method="post" class="m-0">
                             <input type="hidden" name="_csrf" value="{{ csrf }}">
                             <button type="submit" class="btn btn-emerald w-100">
-                                <i class="bi bi-credit-card me-2"></i>Complete Purchase — ${{ auction.buy_now_price|number_format(2) }}
+                                <i class="bi bi-credit-card me-2"></i>{{ 'auction.complete_purchase_full'|t({ amount: auction.buy_now_price|number_format(2) }) }}
                             </button>
                         </form>
-                        <div class="small text-muted-aa">You'll be redirected to Stripe (test mode) to enter your card.</div>
+                        <div class="small text-muted-aa">{{ 'auction.stripe_redirect_note'|t }}</div>
                     {% endif %}
                 {% else %}
                     <div class="alert alert-secondary mb-0">
                         <i class="bi bi-info-circle me-1"></i>
-                        This item has been sold{% if current_user %} to <strong>@{{ bids[0].username }}</strong>{% endif %}.
+                        {% if current_user %}
+                            {{ 'auction.item_sold_to_user'|t({ username: bids[0].username })|raw }}
+                        {% else %}
+                            {{ 'auction.item_has_been_sold'|t }}
+                        {% endif %}
                     </div>
                 {% endif %}
             {% elseif current_user %}
@@ -149,41 +159,41 @@
                             <input type="number" step="0.01" min="{{ min_bid }}"
                                    {% if auction.buy_now_price %}max="{{ auction.buy_now_price }}"{% endif %}
                                    name="amount" id="aa-bid-amount"
-                                   class="form-control" placeholder="{{ min_bid|number_format(2) }} or more" required>
+                                   class="form-control" placeholder="{{ 'auction.bid_placeholder'|t({ min: min_bid|number_format(2) }) }}" required>
                         </div>
-                        <button type="submit" class="btn btn-emerald flex-shrink-0 px-4">Place Bid</button>
+                        <button type="submit" class="btn btn-emerald flex-shrink-0 px-4">{{ 'auction.place_bid'|t }}</button>
                     </form>
-                    <div class="small text-muted-aa">Minimum next bid: ${{ min_bid|number_format(2) }}</div>
+                    <div class="small text-muted-aa">{{ 'auction.min_next_bid'|t({ amount: min_bid|number_format(2) }) }}</div>
                     {% if auction.buy_now_price %}
                         <div id="aa-bid-cap-hint" class="small text-warning-emphasis" hidden>
-                            <i class="bi bi-info-circle me-1"></i>That's over the buyout — capped at ${{ auction.buy_now_price|number_format(2) }}.
+                            <i class="bi bi-info-circle me-1"></i>{{ 'auction.over_buyout_capped'|t({ amount: auction.buy_now_price|number_format(2) }) }}
                         </div>
                     {% endif %}
                 {% else %}
-                    <div class="alert alert-secondary mb-0">This auction has ended.</div>
+                    <div class="alert alert-secondary mb-0">{{ 'auction.has_ended'|t }}</div>
                 {% endif %}
             {% else %}
-                <a href="/login" class="btn btn-primary w-100">Log in to place a bid</a>
+                <a href="/login" class="btn btn-primary w-100">{{ 'auction.login_to_bid'|t }}</a>
             {% endif %}
 
             {% if auction.buy_now_price and not is_sold and auction.status == 'active' and auction.end_time|aa_timeleft != 'Ended' %}
                 {% if current_user %}
                     <button type="button" class="btn btn-amber w-100"
                             data-bs-toggle="modal" data-bs-target="#aa-buy-now-modal">
-                        <i class="bi bi-cart me-2"></i>Buy Now — ${{ auction.buy_now_price|number_format(2) }}
+                        <i class="bi bi-cart me-2"></i>{{ 'auction.buy_now_full'|t({ amount: auction.buy_now_price|number_format(2) }) }}
                     </button>
                 {% else %}
                     <a href="/login" class="btn btn-amber w-100">
-                        <i class="bi bi-cart me-2"></i>Buy Now — ${{ auction.buy_now_price|number_format(2) }}
+                        <i class="bi bi-cart me-2"></i>{{ 'auction.buy_now_full'|t({ amount: auction.buy_now_price|number_format(2) }) }}
                     </a>
                 {% endif %}
             {% endif %}
 
             <div class="row row-cols-2 g-2 small">
-                <div class="col"><div class="aa-trust-pill"><i class="bi bi-shield-check text-emerald"></i> Stripe secure payment</div></div>
+                <div class="col"><div class="aa-trust-pill"><i class="bi bi-shield-check text-emerald"></i> {{ 'auction.stripe_secure'|t }}</div></div>
                 <div class="col"><div class="aa-trust-pill"><i class="bi bi-truck"></i> {{ auction.shipping }}</div></div>
-                <div class="col"><div class="aa-trust-pill"><i class="bi bi-exclamation-triangle text-amber"></i> Snipe protection</div></div>
-                <div class="col"><div class="aa-trust-pill"><i class="bi bi-chat-dots"></i> SMS bid alerts</div></div>
+                <div class="col"><div class="aa-trust-pill"><i class="bi bi-exclamation-triangle text-amber"></i> {{ 'auction.snipe_protection'|t }}</div></div>
+                <div class="col"><div class="aa-trust-pill"><i class="bi bi-chat-dots"></i> {{ 'auction.sms_alerts'|t }}</div></div>
             </div>
         </div>
     </div>
@@ -192,31 +202,31 @@
 
     <div class="row g-4">
         <div class="col-lg-7">
-            <h3 class="h5">About this item</h3>
+            <h3 class="h5">{{ 'auction.about'|t }}</h3>
             <p class="text-muted-aa" style="white-space: pre-line;">{{ auction.description }}</p>
 
             <div class="row row-cols-2 g-2 small mt-2">
                 <div class="col">
                     <div class="p-3 bg-surface-aa rounded-lg-aa">
-                        <div class="text-muted-aa small">Condition</div>
+                        <div class="text-muted-aa small">{{ 'auction.condition'|t }}</div>
                         <div>{{ auction.condition }}</div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="p-3 bg-surface-aa rounded-lg-aa">
-                        <div class="text-muted-aa small">Category</div>
+                        <div class="text-muted-aa small">{{ 'auction.category'|t }}</div>
                         <div>{{ auction.category_name }}</div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="p-3 bg-surface-aa rounded-lg-aa">
-                        <div class="text-muted-aa small">Shipping</div>
+                        <div class="text-muted-aa small">{{ 'auction.shipping'|t }}</div>
                         <div>{{ auction.shipping }}</div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="p-3 bg-surface-aa rounded-lg-aa">
-                        <div class="text-muted-aa small">Listed</div>
+                        <div class="text-muted-aa small">{{ 'auction.listed'|t }}</div>
                         <div>{{ auction.created_at|date('M j, Y') }}</div>
                     </div>
                 </div>
@@ -224,7 +234,7 @@
         </div>
 
         <div class="col-lg-5">
-            <h3 class="h5">Seller</h3>
+            <h3 class="h5">{{ 'auction.seller'|t }}</h3>
             <div class="d-flex align-items-center gap-3 p-3 bg-surface-aa rounded-lg-aa">
                 {% if auction.seller_profile_picture %}
                     <img src="{{ auction.seller_profile_picture }}" class="rounded-circle" width="48" height="48" alt="">
@@ -241,21 +251,21 @@
                             </span>
                         {% endif %}
                     </div>
-                    <div class="small text-muted-aa">@{{ auction.seller_username }} — member since {{ auction.seller_created_at|date('M Y') }}</div>
+                    <div class="small text-muted-aa">@{{ auction.seller_username }} — {{ 'auction.member_since'|t({ month: auction.seller_created_at|date('M Y') }) }}</div>
                 </div>
             </div>
 
             {% if current_user %}
                 <div class="mt-2 small">
                     <a href="/report/listing/{{ auction.item_id }}" class="text-muted-aa text-decoration-none">
-                        <i class="bi bi-flag me-1"></i>Report this listing
+                        <i class="bi bi-flag me-1"></i>{{ 'auction.report_listing'|t }}
                     </a>
                 </div>
             {% endif %}
 
-            <h3 class="h5 mt-4">Recent bids</h3>
+            <h3 class="h5 mt-4">{{ 'auction.recent_bids'|t }}</h3>
             {% if bids|length == 0 %}
-                <p class="text-muted-aa small">No bids yet. Be the first!</p>
+                <p class="text-muted-aa small">{{ 'auction.no_bids'|t }}</p>
             {% else %}
                 <ul class="list-unstyled d-flex flex-column gap-2">
                     {% for bid in bids %}
@@ -268,7 +278,7 @@
                                     <span class="aa-brand-badge" style="width: 28px; height: 28px;"><i class="bi bi-person"></i></span>
                                 {% endif %}
                                 <div>
-                                    <div class="small">{{ bid.username }} {% if loop.first %}<span class="text-success small">Highest</span>{% endif %}</div>
+                                    <div class="small">{{ bid.username }} {% if loop.first %}<span class="text-success small">{{ 'auction.highest'|t }}</span>{% endif %}</div>
                                     <div class="text-muted-aa" style="font-size: 0.7rem;">{{ bid.bid_time|date('M j, g:i a') }}</div>
                                 </div>
                             </div>
@@ -287,9 +297,9 @@
         <div class="modal-content rounded-xl border-0 shadow">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title" id="aa-buy-now-title">
-                    <i class="bi bi-cart-check me-2 text-amber"></i>Confirm purchase
+                    <i class="bi bi-cart-check me-2 text-amber"></i>{{ 'auction.buyout.confirm_title'|t }}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'btn.close'|t }}"></button>
             </div>
             <div class="modal-body">
                 <div class="d-flex gap-3 align-items-center p-3 rounded-lg-aa bg-surface-aa mb-3">
@@ -303,21 +313,20 @@
                     {% endif %}
                     <div class="min-w-0">
                         <div class="fw-medium text-truncate">{{ auction.title }}</div>
-                        <div class="small text-muted-aa">Buyout price</div>
+                        <div class="small text-muted-aa">{{ 'auction.buyout.price_label'|t }}</div>
                         <div class="h4 text-emerald mb-0">${{ auction.buy_now_price|number_format(2) }}</div>
                     </div>
                 </div>
                 <p class="small text-muted-aa mb-0">
-                    You're buying this item immediately at the buyout price. This will lock in the sale
-                    and end bidding for everyone else.
+                    {{ 'auction.buyout.confirm_body'|t }}
                 </p>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ 'btn.cancel'|t }}</button>
                 <form action="/auction/{{ auction.item_id }}/buy-now" method="post" class="m-0">
                     <input type="hidden" name="_csrf" value="{{ csrf }}">
                     <button type="submit" class="btn btn-amber">
-                        <i class="bi bi-cart-check me-2"></i>Confirm — ${{ auction.buy_now_price|number_format(2) }}
+                        <i class="bi bi-cart-check me-2"></i>{{ 'auction.buyout.confirm_button'|t({ amount: auction.buy_now_price|number_format(2) }) }}
                     </button>
                 </form>
             </div>

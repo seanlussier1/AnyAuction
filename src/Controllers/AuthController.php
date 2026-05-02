@@ -9,6 +9,7 @@ use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\NotificationService;
 use App\Services\PhoneNormalizer;
+use App\Services\Translator;
 use App\Services\TwilioService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -34,7 +35,8 @@ final class AuthController
         private readonly FlashService $flash,
         private readonly AuthCodeService $codes,
         private readonly TwilioService $twilio,
-        private readonly PDO $db
+        private readonly PDO $db,
+        private readonly Translator $translator
     ) {
     }
 
@@ -51,7 +53,7 @@ final class AuthController
         $body = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/register')->withStatus(302);
         }
 
@@ -66,13 +68,13 @@ final class AuthController
         $old = compact('email', 'username', 'firstName', 'lastName') + ['phone' => $phoneRaw];
 
         if ($password !== $confirm) {
-            $this->flash->error('Passwords do not match.');
+            $this->flash->error($this->translator->trans('auth.register.passwords_mismatch'));
             return $this->view->render($response, 'auth/register.twig', ['old' => $old]);
         }
 
         $phoneE164 = PhoneNormalizer::normalize($phoneRaw);
         if ($phoneE164 === null) {
-            $this->flash->error('Please enter a valid US or Canada phone number.');
+            $this->flash->error($this->translator->trans('auth.register.bad_phone'));
             return $this->view->render($response, 'auth/register.twig', ['old' => $old]);
         }
 
@@ -84,15 +86,16 @@ final class AuthController
 
         // Drop a welcome notification so the new user has something on the
         // bell from day one. Always site-only — no SMS for this event.
-        (new NotificationService($this->db, $this->twilio))->notifyWelcome($newId, $firstName);
+        (new NotificationService($this->db, $this->twilio, $this->translator))->notifyWelcome($newId, $firstName);
 
         // Force the new user through phone verification before logging them
         // in. The phone is on the row but phone_verified_at is NULL, so the
         // enrollment flow will move straight to the "enter code" step.
+        // Brand-new accounts haven't picked a language yet; default to 'en'.
         $code = $this->codes->issue($newId, 'phone_verify');
         $this->twilio->sendSms(
             $phoneE164,
-            "Verify your AnyAuction phone with code {$code}. Expires in 10 minutes."
+            $this->translator->trans('sms.code.phone_verify', ['code' => $code], 'en')
         );
         // Dev-mode crutch: surface the plaintext code in php logs so devs
         // without Twilio creds can complete the flow. Remove or gate behind
@@ -102,7 +105,7 @@ final class AuthController
         $_SESSION['pending_enrollment_user_id'] = $newId;
         $_SESSION['_enroll_step']               = 'code';
 
-        $this->flash->success('Account created. Enter the 6-digit code we just texted you.');
+        $this->flash->success($this->translator->trans('auth.register.created'));
         return $response->withHeader('Location', '/enroll-phone?step=code')->withStatus(302);
     }
 
@@ -119,7 +122,7 @@ final class AuthController
         $body     = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -127,7 +130,7 @@ final class AuthController
         $password = (string)($body['password']       ?? '');
 
         if ($email === '' || $password === '') {
-            $this->flash->error('Please enter both your email and password.');
+            $this->flash->error($this->translator->trans('auth.login.both_required'));
             return $this->view->render($response, 'auth/login.twig', ['old' => ['email' => $email]]);
         }
 
@@ -148,7 +151,7 @@ final class AuthController
                 $_SESSION['pending_2fa_at']
             );
             $this->auth->completeLogin($userId);
-            $this->flash->success('Welcome back!');
+            $this->flash->success($this->translator->trans('auth.login.welcome_back'));
             return $response->withHeader('Location', '/')->withStatus(302);
         }
 
@@ -166,7 +169,11 @@ final class AuthController
                 $code = $this->codes->issue($userId, 'phone_verify');
                 $this->twilio->sendSms(
                     (string)$user['phone'],
-                    "Verify your AnyAuction phone with code {$code}. Expires in 10 minutes."
+                    $this->translator->trans(
+                        'sms.code.phone_verify',
+                        ['code' => $code],
+                        (string)($user['locale'] ?? 'en')
+                    )
                 );
                 error_log("[dev-2fa] phone_verify code for user_id={$userId}: {$code}");
                 $_SESSION['_enroll_step'] = 'code';
@@ -187,11 +194,15 @@ final class AuthController
         $code = $this->codes->issue($userId, 'login');
         $this->twilio->sendSms(
             (string)$user['phone'],
-            "Your AnyAuction code is {$code}. Expires in 10 minutes."
+            $this->translator->trans(
+                'sms.code.login',
+                ['code' => $code],
+                (string)($user['locale'] ?? 'en')
+            )
         );
         error_log("[dev-2fa] login code for user_id={$userId}: {$code}");
 
-        $this->flash->success('We sent a 6-digit code to your phone.');
+        $this->flash->success($this->translator->trans('auth.2fa.code_sent'));
         return $response->withHeader('Location', '/verify-2fa')->withStatus(302);
     }
 

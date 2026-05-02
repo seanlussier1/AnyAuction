@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Services\AuthCodeService;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\Translator;
 use App\Services\TwilioService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -28,15 +29,14 @@ use Slim\Views\Twig;
 final class PasswordResetController
 {
     private const MIN_PASSWORD_LEN = 8;
-    private const GENERIC_REQUEST_FLASH =
-        'If that email is on file with a verified phone, we sent a 6-digit code.';
 
     public function __construct(
         private readonly Twig $view,
         private readonly AuthService $auth,
         private readonly FlashService $flash,
         private readonly AuthCodeService $codes,
-        private readonly TwilioService $twilio
+        private readonly TwilioService $twilio,
+        private readonly Translator $translator
     ) {
     }
 
@@ -53,14 +53,14 @@ final class PasswordResetController
         $body = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/forgot-password')->withStatus(302);
         }
 
         $email = trim((string)($body['email'] ?? ''));
 
         if ($email === '') {
-            $this->flash->error('Please enter your email address.');
+            $this->flash->error($this->translator->trans('auth.forgot.email_required'));
             return $this->view->render($response, 'auth/forgot_password.twig', ['old' => ['email' => $email]]);
         }
 
@@ -71,7 +71,11 @@ final class PasswordResetController
             $code = $this->codes->issue($userId, 'password_reset');
             $this->twilio->sendSms(
                 (string)$user['phone'],
-                "Your AnyAuction password-reset code is {$code}. Expires in 10 minutes."
+                $this->translator->trans(
+                    'sms.code.password_reset',
+                    ['code' => $code],
+                    (string)($user['locale'] ?? 'en')
+                )
             );
             // Dev-mode crutch — see AuthController for context.
             error_log("[dev-2fa] password_reset code for user_id={$userId}: {$code}");
@@ -84,7 +88,7 @@ final class PasswordResetController
             unset($_SESSION['pending_reset_user_id']);
         }
 
-        $this->flash->success(self::GENERIC_REQUEST_FLASH);
+        $this->flash->success($this->translator->trans('auth.forgot.generic_sent'));
         return $response->withHeader('Location', '/reset-password')->withStatus(302);
     }
 
@@ -101,7 +105,7 @@ final class PasswordResetController
         $body = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/reset-password')->withStatus(302);
         }
 
@@ -110,25 +114,25 @@ final class PasswordResetController
         $confirm  = (string)($body['password_confirm']       ?? '');
 
         if ($password !== $confirm) {
-            $this->flash->error('Passwords do not match.');
+            $this->flash->error($this->translator->trans('auth.reset.passwords_mismatch'));
             return $this->view->render($response, 'auth/reset_password.twig', []);
         }
 
         if (strlen($password) < self::MIN_PASSWORD_LEN) {
-            $this->flash->error('Password must be at least ' . self::MIN_PASSWORD_LEN . ' characters long.');
+            $this->flash->error($this->translator->trans('auth.reset.password_too_short'));
             return $this->view->render($response, 'auth/reset_password.twig', []);
         }
 
         $userId = (int)($_SESSION['pending_reset_user_id'] ?? 0);
         if ($userId <= 0 || !$this->codes->verify($userId, 'password_reset', $code)) {
-            $this->flash->error('That code is invalid or expired.');
+            $this->flash->error($this->translator->trans('auth.reset.bad_code'));
             return $this->view->render($response, 'auth/reset_password.twig', []);
         }
 
         $this->auth->updatePassword($userId, $password);
         unset($_SESSION['pending_reset_user_id']);
 
-        $this->flash->success('Password updated. Please log in with your new password.');
+        $this->flash->success($this->translator->trans('auth.reset.success'));
         return $response->withHeader('Location', '/login')->withStatus(302);
     }
 

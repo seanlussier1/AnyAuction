@@ -1,5 +1,5 @@
 {% extends 'layout.twig' %}
-{% block title %}Sign in — AnyAuction{% endblock %}
+{% block title %}{{ 'auth.login.title'|t }} — AnyAuction{% endblock %}
 
 {% block content %}
 <div class="aa-auth-shell">
@@ -10,40 +10,40 @@
                 <span class="fs-5">AnyAuction</span>
             </a>
 
-            <h1 class="h3 mb-1">Welcome back</h1>
-            <p class="text-muted-aa mb-4">Sign in to continue bidding and selling.</p>
+            <h1 class="h3 mb-1">{{ 'auth.login.welcome_heading'|t }}</h1>
+            <p class="text-muted-aa mb-4">{{ 'auth.login.subtitle'|t }}</p>
 
             <form method="post" action="/login" class="d-flex flex-column gap-3">
                 <input type="hidden" name="_csrf" value="{{ csrf_token }}">
                 <div>
-                    <label class="form-label small text-muted-aa">Email</label>
+                    <label class="form-label small text-muted-aa">{{ 'auth.login.email'|t }}</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                        <input type="email" name="email" class="form-control" placeholder="you@example.com"
+                        <input type="email" name="email" class="form-control" placeholder="{{ 'auth.login.email_placeholder'|t }}"
                                value="{{ old.email|default('') }}" required>
                     </div>
                 </div>
                 <div>
                     <label class="form-label small text-muted-aa d-flex justify-content-between">
-                        <span>Password</span>
-                        <a href="/forgot-password" class="text-decoration-none small">Forgot password?</a>
+                        <span>{{ 'auth.login.password'|t }}</span>
+                        <a href="/forgot-password" class="text-decoration-none small">{{ 'auth.login.forgot'|t }}</a>
                     </label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                        <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+                        <input type="password" name="password" class="form-control" placeholder="{{ 'auth.login.password_placeholder'|t }}" required>
                     </div>
                 </div>
 
                 <label class="d-flex align-items-center gap-2 small text-muted-aa">
                     <input type="checkbox" name="remember" checked>
-                    Remember me for 30 days
+                    {{ 'auth.login.remember'|t }}
                 </label>
 
-                <button type="submit" class="btn btn-primary py-2">Sign In <i class="bi bi-arrow-right ms-1"></i></button>
+                <button type="submit" class="btn btn-primary py-2">{{ 'auth.login.submit'|t }} <i class="bi bi-arrow-right ms-1"></i></button>
             </form>
 
             <p class="text-center small text-muted-aa mt-4">
-                Don't have an account? <a href="/register" class="text-decoration-none">Create one</a>
+                {{ 'auth.login.no_account'|t }} <a href="/register" class="text-decoration-none">{{ 'auth.login.create_one'|t }}</a>
             </p>
         </div>
     </div>
@@ -52,11 +52,11 @@
         <img src="https://images.unsplash.com/photo-1623503664054-945220c7294c?w=1200&q=80" alt="">
         <div class="caption">
             <div class="d-flex gap-2 mb-3">
-                <span class="badge bg-warning text-dark">Live Now</span>
-                <span class="badge bg-light bg-opacity-25 text-white">12,000+ Auctions</span>
+                <span class="badge bg-warning text-dark">{{ 'auth.login.live_now'|t }}</span>
+                <span class="badge bg-light bg-opacity-25 text-white">{{ 'auth.login.auction_count'|t }}</span>
             </div>
-            <h2 class="h3 mb-2">Find your next<br>treasure today.</h2>
-            <p class="small mb-0 text-white-50">Join thousands of buyers and sellers in the most exciting auction marketplace.</p>
+            <h2 class="h3 mb-2">{{ 'auth.login.visual.heading_l1'|t }}<br>{{ 'auth.login.visual.heading_l2'|t }}</h2>
+            <p class="small mb-0 text-white-50">{{ 'auth.login.visual.body'|t }}</p>
         </div>
     </div>
 </div>

@@ -6,6 +6,7 @@ use App\Services\AuthService;
 use App\Services\CloudinaryService;
 use App\Services\FlashService;
 use App\Services\StripeService;
+use App\Services\Translator;
 use App\Services\TwilioService;
 use DI\ContainerBuilder;
 use Psr\Container\ContainerInterface;
@@ -87,6 +88,10 @@ return function (ContainerBuilder $builder): void {
             apiKey:    (string)$c->get('settings')['cloudinary']['api_key'],
             apiSecret: (string)$c->get('settings')['cloudinary']['api_secret'],
             folder:    (string)$c->get('settings')['cloudinary']['folder']
+        ),
+
+        Translator::class => fn (ContainerInterface $c) => new Translator(
+            localesPath: (string)$c->get('settings')['paths']['locales']
         ),
     ]);
 };

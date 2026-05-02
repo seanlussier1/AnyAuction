@@ -1,32 +1,37 @@
 {% extends 'layout.twig' %}
-{% block title %}Checkout — AnyAuction{% endblock %}
+{% block title %}{{ 'checkout.page_title'|t }} — AnyAuction{% endblock %}
 
 {% block content %}
 <div class="container py-5" style="max-width: 36rem;">
     {% if state == 'paid' %}
         <div class="text-center mb-4">
             <i class="bi bi-check-circle-fill text-emerald" style="font-size: 4rem;"></i>
-            <h1 class="h3 mt-3">Payment confirmed</h1>
-            <p class="text-muted-aa">Thanks for your purchase. A copy of this confirmation is in your profile under <strong>Orders</strong>.</p>
+            <h1 class="h3 mt-3">{{ 'checkout.success.heading'|t }}</h1>
+            <p class="text-muted-aa">{{ 'checkout.success.thanks'|t }}</p>
         </div>
 
         {% if order %}
             <div class="p-4 rounded-xl border bg-surface-aa">
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted-aa">Order</span>
+                    <span class="text-muted-aa">{{ 'checkout.order'|t }}</span>
                     <span class="fw-medium">#{{ order.order_id }}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted-aa">Amount</span>
+                    <span class="text-muted-aa">{{ 'checkout.amount'|t }}</span>
                     <span class="fw-medium">${{ order.amount|number_format(2) }}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted-aa">Status</span>
-                    <span class="badge bg-success-subtle text-success-emphasis text-capitalize">{{ order.status }}</span>
+                    <span class="text-muted-aa">{{ 'checkout.status'|t }}</span>
+                    <span class="badge bg-success-subtle text-success-emphasis text-capitalize">
+                        {% if order.status == 'paid' %}{{ 'profile.orders.status.paid'|t }}
+                        {% elseif order.status == 'pending' %}{{ 'profile.orders.status.pending'|t }}
+                        {% elseif order.status == 'cancelled' %}{{ 'profile.orders.status.cancelled'|t }}
+                        {% else %}{{ order.status }}{% endif %}
+                    </span>
                 </div>
                 {% if order.paid_at %}
                     <div class="d-flex justify-content-between">
-                        <span class="text-muted-aa">Paid at</span>
+                        <span class="text-muted-aa">{{ 'checkout.paid_at'|t }}</span>
                         <span>{{ order.paid_at|date('M j, Y g:i a') }}</span>
                     </div>
                 {% endif %}
@@ -34,46 +39,46 @@
 
             {% if not already_rated %}
                 <div class="mt-4">
-                    <h2 class="h6 mb-2">Leave a rating for the seller</h2>
-                    {% include 'partials/rate_form.twig' with { order_id: order.order_id, label: 'Rate seller', csrf: csrf } only %}
+                    <h2 class="h6 mb-2">{{ 'checkout.rate.heading'|t }}</h2>
+                    {% include 'partials/rate_form.twig' with { order_id: order.order_id, label: 'rating.label.rate_seller'|t, csrf: csrf } only %}
                 </div>
             {% else %}
-                <p class="small text-success mt-3 mb-0"><i class="bi bi-check-circle me-1"></i>Thanks — you've already rated this seller.</p>
+                <p class="small text-success mt-3 mb-0"><i class="bi bi-check-circle me-1"></i>{{ 'checkout.rate.already'|t }}</p>
             {% endif %}
 
             <div class="d-flex gap-2 mt-4">
-                <a href="/auction/{{ order.item_id }}" class="btn btn-outline-secondary flex-fill">View item</a>
-                <a href="/profile" class="btn btn-primary flex-fill">My orders</a>
+                <a href="/auction/{{ order.item_id }}" class="btn btn-outline-secondary flex-fill">{{ 'checkout.view_item'|t }}</a>
+                <a href="/profile" class="btn btn-primary flex-fill">{{ 'checkout.my_orders'|t }}</a>
             </div>
         {% endif %}
 
     {% elseif state == 'pending' %}
         <div class="text-center">
             <i class="bi bi-hourglass-split text-warning-emphasis" style="font-size: 4rem;"></i>
-            <h1 class="h3 mt-3">Payment processing</h1>
-            <p class="text-muted-aa">Stripe hasn't confirmed payment yet. Refresh in a moment.</p>
-            <a href="/profile" class="btn btn-primary mt-2">Back to profile</a>
+            <h1 class="h3 mt-3">{{ 'checkout.pending.heading'|t }}</h1>
+            <p class="text-muted-aa">{{ 'checkout.pending.body'|t }}</p>
+            <a href="/profile" class="btn btn-primary mt-2">{{ 'checkout.back_to_profile'|t }}</a>
         </div>
 
     {% elseif state == 'cancelled' %}
         <div class="text-center">
             <i class="bi bi-x-circle text-muted-aa" style="font-size: 4rem;"></i>
-            <h1 class="h3 mt-3">Checkout cancelled</h1>
-            <p class="text-muted-aa">No charge was made. You can complete the purchase whenever you're ready.</p>
+            <h1 class="h3 mt-3">{{ 'checkout.cancelled.heading'|t }}</h1>
+            <p class="text-muted-aa">{{ 'checkout.cancelled.body'|t }}</p>
             <div class="d-flex gap-2 justify-content-center mt-3">
                 {% if item_id %}
-                    <a href="/auction/{{ item_id }}" class="btn btn-primary">Back to listing</a>
+                    <a href="/auction/{{ item_id }}" class="btn btn-primary">{{ 'checkout.cancelled.back'|t }}</a>
                 {% endif %}
-                <a href="/browse" class="btn btn-outline-secondary">Browse</a>
+                <a href="/browse" class="btn btn-outline-secondary">{{ 'nav.browse'|t }}</a>
             </div>
         </div>
 
     {% else %}
         <div class="text-center">
             <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i>
-            <h1 class="h3 mt-3">Something went wrong</h1>
-            <p class="text-muted-aa">{{ message ?? 'We could not verify your checkout session.' }}</p>
-            <a href="/profile" class="btn btn-primary">Back to profile</a>
+            <h1 class="h3 mt-3">{{ 'checkout.error.heading'|t }}</h1>
+            <p class="text-muted-aa">{{ message ?? ('checkout.error.generic'|t) }}</p>
+            <a href="/profile" class="btn btn-primary">{{ 'checkout.back_to_profile'|t }}</a>
         </div>
     {% endif %}
 </div>

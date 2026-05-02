@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Models\Bid;
 use App\Models\SmsConversation;
 use App\Services\NotificationService;
+use App\Services\Translator;
 use App\Services\TwilioService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -43,7 +44,8 @@ final class TwilioWebhookController
 
     public function __construct(
         private readonly PDO $db,
-        private readonly TwilioService $twilio
+        private readonly TwilioService $twilio,
+        private readonly Translator $translator
     ) {
     }
 
@@ -80,12 +82,14 @@ final class TwilioWebhookController
         $convos->gc();
 
         // 2. Keyword overrides — STOP / START always take precedence over
-        // any in-flight conversation. Compliance + sane UX.
+        // any in-flight conversation. Compliance + sane UX. Resolve locale
+        // by phone since opt-out can flip on rows whose phone isn't yet
+        // verified.
         if (in_array($bodyLower, self::STOP_KEYWORDS, true)) {
-            return $this->handleStop($response, $convos, $from);
+            return $this->handleStop($response, $convos, $from, $this->localeForPhone($from));
         }
         if (in_array($bodyLower, self::START_KEYWORDS, true)) {
-            return $this->handleStart($response, $from);
+            return $this->handleStart($response, $from, $this->localeForPhone($from));
         }
 
         // 3. Tie the inbound number to a verified user.
@@ -93,12 +97,17 @@ final class TwilioWebhookController
         if ($user === null) {
             return $this->twiml(
                 $response,
-                "AnyAuction: we couldn't find an account for this number. Reply START or visit anyauction.org/profile to add one."
+                $this->translator->trans('sms.unknown_phone', [], 'en')
             );
         }
+        $userLocale = (string)($user['locale'] ?? 'en');
+
         if ((int)$user['sms_opt_out'] === 1) {
             // Silently drop — they opted out. Don't reopen a thread.
-            return $this->twiml($response, "AnyAuction: you're unsubscribed. Reply START to resubscribe.");
+            return $this->twiml(
+                $response,
+                $this->translator->trans('sms.stop.confirm', [], $userLocale)
+            );
         }
 
         // 4. Look up the active conversation. No row = no active outbid.
@@ -106,7 +115,7 @@ final class TwilioWebhookController
         if ($convo === null) {
             return $this->twiml(
                 $response,
-                "AnyAuction: no active outbid waiting. Visit anyauction.org/browse to bid."
+                $this->translator->trans('sms.no_conversation', [], $userLocale)
             );
         }
 
@@ -120,7 +129,8 @@ final class TwilioWebhookController
                 $convos,
                 $from,
                 $title,
-                $bodyTrim
+                $bodyTrim,
+                $userLocale
             );
         }
 
@@ -132,7 +142,8 @@ final class TwilioWebhookController
                 $itemId,
                 (int)$user['user_id'],
                 (float)$convo['pending_amount'],
-                $bodyLower
+                $bodyLower,
+                $userLocale
             );
         }
 
@@ -145,7 +156,7 @@ final class TwilioWebhookController
     // Keyword handlers
     // --------------------------------------------------------------------
 
-    private function handleStop(Response $response, SmsConversation $convos, string $phone): Response
+    private function handleStop(Response $response, SmsConversation $convos, string $phone, string $locale): Response
     {
         // Mark every account on this number opted-out — same-number-shared
         // family scenarios are rare but we don't want one user's STOP to
@@ -159,11 +170,11 @@ final class TwilioWebhookController
 
         return $this->twiml(
             $response,
-            "AnyAuction: you're unsubscribed and will receive no more messages. Reply START to resubscribe."
+            $this->translator->trans('sms.stop.confirm', [], $locale)
         );
     }
 
-    private function handleStart(Response $response, string $phone): Response
+    private function handleStart(Response $response, string $phone, string $locale): Response
     {
         $stmt = $this->db->prepare(
             'UPDATE users SET sms_opt_out = 0 WHERE phone = :p'
@@ -172,7 +183,7 @@ final class TwilioWebhookController
 
         return $this->twiml(
             $response,
-            "AnyAuction: you're resubscribed. We'll text you when you're outbid. Reply STOP to opt out."
+            $this->translator->trans('sms.start.confirm', [], $locale)
         );
     }
 
@@ -185,13 +196,14 @@ final class TwilioWebhookController
         SmsConversation $convos,
         string $phone,
         string $title,
-        string $body
+        string $body,
+        string $locale
     ): Response {
         $amount = $this->parseDollarAmount($body);
         if ($amount === null) {
             return $this->twiml(
                 $response,
-                "AnyAuction: I couldn't read that as a dollar amount. Reply with a number like '70' or '$70.50', or STOP to opt out."
+                $this->translator->trans('sms.bid.parse_fail', [], $locale)
             );
         }
         if ($amount <= 0) {
@@ -202,11 +214,10 @@ final class TwilioWebhookController
 
         return $this->twiml(
             $response,
-            sprintf(
-                "AnyAuction: confirm bid of $%s on '%s'? Reply YES to place, anything else cancels.",
-                number_format($amount, 2),
-                $title
-            )
+            $this->translator->trans('sms.bid.confirm_prompt', [
+                'amount' => number_format($amount, 2),
+                'title'  => $title,
+            ], $locale)
         );
     }
 
@@ -217,16 +228,14 @@ final class TwilioWebhookController
         int $itemId,
         int $userId,
         float $amount,
-        string $bodyLower
+        string $bodyLower,
+        string $locale
     ): Response {
         if (!in_array($bodyLower, self::YES_KEYWORDS, true)) {
             $convos->delete($phone);
             return $this->twiml(
                 $response,
-                sprintf(
-                    "AnyAuction: bid cancelled. Visit anyauction.org/auction/%d to bid online.",
-                    $itemId
-                )
+                $this->translator->trans('sms.bid.cancelled', [], $locale)
             );
         }
 
@@ -237,7 +246,10 @@ final class TwilioWebhookController
             $result = (new Bid($this->db))->place($itemId, $userId, $amount);
         } catch (RuntimeException $e) {
             $convos->delete($phone);
-            return $this->twiml($response, 'AnyAuction: ' . $e->getMessage());
+            return $this->twiml(
+                $response,
+                $this->translator->trans('sms.bid.failed', ['reason' => $e->getMessage()], $locale)
+            );
         } catch (Throwable $e) {
             error_log('[TwilioWebhook] bid place failed: ' . $e->getMessage());
             $convos->delete($phone);
@@ -246,7 +258,7 @@ final class TwilioWebhookController
 
         // Mirror the AuctionController fan-out so the site state stays
         // consistent regardless of which entry point placed the bid.
-        $notifs = new NotificationService($this->db, $this->twilio);
+        $notifs = new NotificationService($this->db, $this->twilio, $this->translator);
         $notifs->notifyWatchers($itemId, 'bid', [
             'amount'   => (float)$result['amount'],
             'actor_id' => $userId,
@@ -281,13 +293,17 @@ final class TwilioWebhookController
 
         $convos->delete($phone);
 
-        $msg = sprintf(
-            "AnyAuction: bid of $%s placed.",
-            number_format((float)$result['amount'], 2)
-        );
+        $amountFmt = number_format((float)$result['amount'], 2);
         if (!empty($result['snipe_extended'])) {
             $extMinutes = (int)round(((int)$result['extension_seconds']) / 60);
-            $msg .= sprintf(' Auction extended by %d min.', $extMinutes);
+            $msg = $this->translator->trans('sms.bid.placed_snipe', [
+                'amount'  => $amountFmt,
+                'minutes' => $extMinutes,
+            ], $locale);
+        } else {
+            $msg = $this->translator->trans('sms.bid.placed', [
+                'amount' => $amountFmt,
+            ], $locale);
         }
         return $this->twiml($response, $msg);
     }
@@ -312,7 +328,7 @@ final class TwilioWebhookController
     private function findUserByPhone(string $phone): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT user_id, phone, sms_opt_out
+            'SELECT user_id, phone, sms_opt_out, locale
              FROM users
              WHERE phone = :p AND phone_verified_at IS NOT NULL
              LIMIT 1'
@@ -320,6 +336,21 @@ final class TwilioWebhookController
         $stmt->execute(['p' => $phone]);
         $row = $stmt->fetch();
         return $row ?: null;
+    }
+
+    /**
+     * Locale lookup keyed by phone — STOP/START hit BEFORE the user lookup
+     * runs (per-row sms_opt_out flips include unverified rows), so we need
+     * a separate fetch by phone alone. Falls back to 'en' if no row found.
+     */
+    private function localeForPhone(string $phone): string
+    {
+        $stmt = $this->db->prepare(
+            'SELECT locale FROM users WHERE phone = :p ORDER BY user_id ASC LIMIT 1'
+        );
+        $stmt->execute(['p' => $phone]);
+        $code = (string)$stmt->fetchColumn();
+        return $code === '' ? 'en' : $code;
     }
 
     private function lookupTitle(int $itemId): ?string

@@ -31,6 +31,7 @@ CREATE TABLE users (
     is_verified        TINYINT(1)   NOT NULL DEFAULT 0,
     phone_verified_at  DATETIME     NULL,
     sms_opt_out        TINYINT(1)   NOT NULL DEFAULT 0,
+    locale             VARCHAR(5)   NOT NULL DEFAULT 'en',
     created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

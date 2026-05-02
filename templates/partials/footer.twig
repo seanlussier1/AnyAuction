@@ -8,36 +8,36 @@
                     </span>
                     <span class="fs-5 text-white">AnyAuction</span>
                 </div>
-                <p class="small text-white-50">The marketplace for everything. Buy, sell, and auction anything you want.</p>
+                <p class="small text-white-50">{{ 'footer.tagline'|t }}</p>
             </div>
 
             <div class="col-6 col-md-3">
-                <h4>Marketplace</h4>
-                <a href="/browse">Browse Auctions</a>
-                <a href="/sell">Sell an Item</a>
-                <a href="/browse">Categories</a>
+                <h4>{{ 'footer.col.marketplace'|t }}</h4>
+                <a href="/browse">{{ 'footer.browse'|t }}</a>
+                <a href="/sell">{{ 'footer.sell'|t }}</a>
+                <a href="/browse">{{ 'footer.categories'|t }}</a>
             </div>
 
             <div class="col-6 col-md-2">
-                <h4>Support</h4>
-                <a href="#">Help Center</a>
-                <a href="#">Trust &amp; Safety</a>
-                <a href="#">Contact Us</a>
+                <h4>{{ 'footer.col.support'|t }}</h4>
+                <a href="#">{{ 'footer.help'|t }}</a>
+                <a href="#">{{ 'footer.trust'|t }}</a>
+                <a href="#">{{ 'footer.contact'|t }}</a>
             </div>
 
             <div class="col-6 col-md-3">
-                <h4>Legal</h4>
-                <a href="#">Terms of Service</a>
-                <a href="#">Privacy Policy</a>
-                <a href="#">Cookie Policy</a>
+                <h4>{{ 'footer.col.legal'|t }}</h4>
+                <a href="#">{{ 'footer.terms'|t }}</a>
+                <a href="#">{{ 'footer.privacy'|t }}</a>
+                <a href="#">{{ 'footer.cookies'|t }}</a>
             </div>
         </div>
 
         <hr class="border-light opacity-25 mt-4">
 
         <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center small text-white-50 gap-2">
-            <span>&copy; {{ "now"|date("Y") }} AnyAuction. All rights reserved.</span>
-            <span><i class="bi bi-shield-lock me-1"></i>Payments secured by Stripe</span>
+            <span>{{ 'footer.copyright'|t({ year: 'now'|date('Y') }) }}</span>
+            <span><i class="bi bi-shield-lock me-1"></i>{{ 'footer.stripe'|t }}</span>
         </div>
     </div>
 </footer>

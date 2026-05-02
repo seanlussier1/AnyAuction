@@ -1,15 +1,15 @@
 {% extends 'layout.twig' %}
-{% block title %}Create auction listing — AnyAuction{% endblock %}
+{% block title %}{{ 'sell.page_title'|t }} — AnyAuction{% endblock %}
 
 {% block content %}
 <div class="container py-4" style="max-width: 48rem;">
 
-    <h1 class="h3 mb-2">Create Auction Listing</h1>
-    <p class="text-muted-aa mb-4">List your item and start receiving bids from eager buyers. Fill in the details below to get started.</p>
+    <h1 class="h3 mb-2">{{ 'sell.heading'|t }}</h1>
+    <p class="text-muted-aa mb-4">{{ 'sell.intro'|t }}</p>
 
     <div class="alert alert-info small mb-4">
         <i class="bi bi-info-circle me-1"></i>
-        Upload images and create your auction listing.
+        {{ 'sell.upload_hint'|t }}
     </div>
 
     {% if errors %}
@@ -25,59 +25,59 @@
     <form action="" method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4" id="sell-form" novalidate>
 
         <section>
-            <h5>Photos <span class="text-danger">*</span></h5>
-            <p class="small text-muted-aa">Add 1 to 5 photos. The first image is the main listing photo.</p>
+            <h5>{{ 'sell.field.images'|t }} <span class="text-danger">*</span></h5>
+            <p class="small text-muted-aa">{{ 'sell.images.hint'|t }}</p>
             <div class="d-flex flex-wrap gap-3">
                 <label for="image-upload" class="border border-2 border-dashed rounded d-flex flex-column align-items-center justify-content-center text-muted" style="width: 96px; height: 96px; cursor: pointer; background-color: #f8f9fa;">
                     <i class="bi bi-upload fs-5"></i>
-                    <small>Add photos</small>
+                    <small>{{ 'sell.images.add'|t }}</small>
                 </label>
                 <input type="file" id="image-upload" name="images[]" accept="image/*" multiple style="display: none;">
             </div>
             <div id="image-previews" class="d-flex flex-wrap gap-3 mt-3"></div>
             <div id="images-error" class="text-danger small mt-2" hidden></div>
-            <p class="small text-muted mt-2"><i class="bi bi-image me-1"></i>Images will be uploaded to the server.</p>
+            <p class="small text-muted mt-2"><i class="bi bi-image me-1"></i>{{ 'sell.images.upload_note'|t }}</p>
         </section>
 
         <section class="d-flex flex-column gap-3">
-            <h5 class="mb-0">Item Details</h5>
+            <h5 class="mb-0">{{ 'sell.section.item_details'|t }}</h5>
             <div>
-                <label class="form-label small text-muted-aa">Title <span class="text-danger">*</span></label>
-                <input name="title" class="form-control" placeholder="e.g., Vintage Rolex Submariner 1968" required value="{{ old.title ?? '' }}">
+                <label class="form-label small text-muted-aa">{{ 'sell.field.title'|t }} <span class="text-danger">*</span></label>
+                <input name="title" class="form-control" placeholder="{{ 'sell.field.title.placeholder'|t }}" required value="{{ old.title ?? '' }}">
             </div>
             <div>
-                <label class="form-label small text-muted-aa">Description <span class="text-danger">*</span></label>
-                <textarea name="description" rows="4" class="form-control" placeholder="Describe your item in detail…" required>{{ old.description ?? '' }}</textarea>
+                <label class="form-label small text-muted-aa">{{ 'sell.field.description'|t }} <span class="text-danger">*</span></label>
+                <textarea name="description" rows="4" class="form-control" placeholder="{{ 'sell.field.description.placeholder'|t }}" required>{{ old.description ?? '' }}</textarea>
             </div>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label small text-muted-aa">Category <span class="text-danger">*</span></label>
+                    <label class="form-label small text-muted-aa">{{ 'sell.field.category'|t }} <span class="text-danger">*</span></label>
                     <select name="category_id" class="form-select" required>
-                        <option value="">Select category</option>
+                        <option value="">{{ 'sell.field.category.placeholder'|t }}</option>
                         {% for cat in categories %}
                             <option value="{{ cat.category_id }}" {% if (old.category_id ?? '') == cat.category_id %}selected{% endif %}>{{ cat.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label small text-muted-aa">Condition</label>
+                    <label class="form-label small text-muted-aa">{{ 'sell.field.condition'|t }}</label>
                     <select name="condition" class="form-select">
-                        <option value="">Select condition</option>
-                        <option {% if (old.condition ?? '') == 'New' %}selected{% endif %}>New</option>
-                        <option {% if (old.condition ?? '') == 'Like New' %}selected{% endif %}>Like New</option>
-                        <option {% if (old.condition ?? '') == 'Excellent' %}selected{% endif %}>Excellent</option>
-                        <option {% if (old.condition ?? '') == 'Good' %}selected{% endif %}>Good</option>
-                        <option {% if (old.condition ?? '') == 'Fair' %}selected{% endif %}>Fair</option>
+                        <option value="">{{ 'sell.field.condition.placeholder'|t }}</option>
+                        <option value="New"       {% if (old.condition ?? '') == 'New' %}selected{% endif %}>{{ 'condition.new'|t }}</option>
+                        <option value="Like New"  {% if (old.condition ?? '') == 'Like New' %}selected{% endif %}>{{ 'condition.like_new'|t }}</option>
+                        <option value="Excellent" {% if (old.condition ?? '') == 'Excellent' %}selected{% endif %}>{{ 'condition.excellent'|t }}</option>
+                        <option value="Good"      {% if (old.condition ?? '') == 'Good' %}selected{% endif %}>{{ 'condition.good'|t }}</option>
+                        <option value="Fair"      {% if (old.condition ?? '') == 'Fair' %}selected{% endif %}>{{ 'condition.fair'|t }}</option>
                     </select>
                 </div>
             </div>
         </section>
 
         <section class="d-flex flex-column gap-3">
-            <h5 class="mb-0"><i class="bi bi-currency-dollar"></i> Pricing</h5>
+            <h5 class="mb-0"><i class="bi bi-currency-dollar"></i> {{ 'sell.section.pricing'|t }}</h5>
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label small text-muted-aa">Starting price <span class="text-danger">*</span></label>
+                    <label class="form-label small text-muted-aa">{{ 'sell.field.starting_price'|t }} <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input type="number" step="0.01" min="0" name="starting_price" id="starting-price"
@@ -85,20 +85,20 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small text-muted-aa">Reserve price</label>
+                    <label class="form-label small text-muted-aa">{{ 'sell.field.reserve_price.short'|t }}</label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input type="number" step="0.01" min="0" name="reserve_price" id="reserve-price"
-                               class="form-control" placeholder="Optional" value="{{ old.reserve_price ?? '' }}">
+                               class="form-control" placeholder="{{ 'sell.field.optional'|t }}" value="{{ old.reserve_price ?? '' }}">
                     </div>
                     <div id="reserve-error" class="text-danger small mt-1" hidden></div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small text-muted-aa">Buy Now price</label>
+                    <label class="form-label small text-muted-aa">{{ 'sell.field.buy_now_price.short'|t }}</label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input type="number" step="0.01" min="0" name="buy_now_price" id="buy-now-price"
-                               class="form-control" placeholder="Optional" value="{{ old.buy_now_price ?? '' }}">
+                               class="form-control" placeholder="{{ 'sell.field.optional'|t }}" value="{{ old.buy_now_price ?? '' }}">
                     </div>
                     <div id="buy-now-error" class="text-danger small mt-1" hidden></div>
                 </div>
@@ -106,26 +106,26 @@
         </section>
 
         <section class="d-flex flex-column gap-3">
-            <h5 class="mb-0"><i class="bi bi-clock"></i> Duration &amp; Shipping</h5>
+            <h5 class="mb-0"><i class="bi bi-clock"></i> {{ 'sell.section.duration_shipping'|t }}</h5>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label small text-muted-aa">Auction duration</label>
+                    <label class="form-label small text-muted-aa">{{ 'sell.field.duration.full'|t }}</label>
                     <select name="duration" class="form-select">
-                        <option value="1" {% if (old.duration ?? '') == '1' %}selected{% endif %}>1 day</option>
-                        <option value="3" {% if (old.duration ?? '') == '3' %}selected{% endif %}>3 days</option>
-                        <option value="5" {% if (old.duration ?? '') == '5' %}selected{% endif %}>5 days</option>
-                        <option value="7" {% if (old.duration ?? '7') == '7' %}selected{% endif %}>7 days</option>
-                        <option value="10" {% if (old.duration ?? '') == '10' %}selected{% endif %}>10 days</option>
-                        <option value="14" {% if (old.duration ?? '') == '14' %}selected{% endif %}>14 days</option>
+                        <option value="1"  {% if (old.duration ?? '') == '1' %}selected{% endif %}>{{ 'sell.duration.1d'|t }}</option>
+                        <option value="3"  {% if (old.duration ?? '') == '3' %}selected{% endif %}>{{ 'sell.duration.3d'|t }}</option>
+                        <option value="5"  {% if (old.duration ?? '') == '5' %}selected{% endif %}>{{ 'sell.duration.5d'|t }}</option>
+                        <option value="7"  {% if (old.duration ?? '7') == '7' %}selected{% endif %}>{{ 'sell.duration.7d'|t }}</option>
+                        <option value="10" {% if (old.duration ?? '') == '10' %}selected{% endif %}>{{ 'sell.duration.10d'|t }}</option>
+                        <option value="14" {% if (old.duration ?? '') == '14' %}selected{% endif %}>{{ 'sell.duration.14d'|t }}</option>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label small text-muted-aa">Shipping</label>
+                    <label class="form-label small text-muted-aa">{{ 'sell.field.shipping'|t }}</label>
                     <select name="shipping" class="form-select">
-                        <option value="free" {% if (old.shipping ?? '') == 'free' %}selected{% endif %}>Free shipping</option>
-                        <option value="standard" {% if (old.shipping ?? '') == 'standard' %}selected{% endif %}>Standard ($10)</option>
-                        <option value="express" {% if (old.shipping ?? '') == 'express' %}selected{% endif %}>Express ($25)</option>
-                        <option value="pickup" {% if (old.shipping ?? '') == 'pickup' %}selected{% endif %}>Local pickup only</option>
+                        <option value="free"     {% if (old.shipping ?? '') == 'free' %}selected{% endif %}>{{ 'sell.shipping.free'|t }}</option>
+                        <option value="standard" {% if (old.shipping ?? '') == 'standard' %}selected{% endif %}>{{ 'sell.shipping.standard'|t }}</option>
+                        <option value="express"  {% if (old.shipping ?? '') == 'express' %}selected{% endif %}>{{ 'sell.shipping.express'|t }}</option>
+                        <option value="pickup"   {% if (old.shipping ?? '') == 'pickup' %}selected{% endif %}>{{ 'sell.shipping.pickup'|t }}</option>
                     </select>
                 </div>
             </div>
@@ -135,13 +135,13 @@
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" id="smsOpt" checked>
                 <label class="form-check-label" for="smsOpt">
-                    Enable SMS bid notifications (Twilio)
-                    <div class="small text-muted-aa">Receive text messages when someone bids. Buyers can counter-bid via SMS reply.</div>
+                    {{ 'sell.sms_opt.label'|t }}
+                    <div class="small text-muted-aa">{{ 'sell.sms_opt.help'|t }}</div>
                 </label>
             </div>
         </section>
 
-        <button type="submit" class="btn btn-primary py-2">Create Auction Listing</button>
+        <button type="submit" class="btn btn-primary py-2">{{ 'sell.submit_button'|t }}</button>
         <input type="hidden" name="_csrf" value="{{ csrf }}">
     </form>
 </div>

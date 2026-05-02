@@ -11,6 +11,7 @@ use App\Models\Rating;
 use App\Models\Watchlist;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\Translator;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -22,14 +23,15 @@ final class ProfileController
         private readonly PDO $db,
         private readonly Twig $view,
         private readonly AuthService $auth,
-        private readonly FlashService $flash
+        private readonly FlashService $flash,
+        private readonly Translator $translator
     ) {
     }
 
     public function index(Request $request, Response $response): Response
     {
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Log in to view your profile.');
+            $this->flash->error($this->translator->trans('auth.required.profile'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 

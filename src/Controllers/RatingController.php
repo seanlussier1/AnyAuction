@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Models\Rating;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\Translator;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -17,7 +18,8 @@ final class RatingController
     public function __construct(
         private readonly PDO $db,
         private readonly AuthService $auth,
-        private readonly FlashService $flash
+        private readonly FlashService $flash,
+        private readonly Translator $translator
     ) {
     }
 
@@ -32,13 +34,13 @@ final class RatingController
         $referer = $request->getHeaderLine('Referer') ?: '/profile';
 
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Log in to leave a rating.');
+            $this->flash->error($this->translator->trans('auth.required.rate'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
         $body = (array)$request->getParsedBody();
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', $referer)->withStatus(302);
         }
 
@@ -52,7 +54,7 @@ final class RatingController
                 $score,
                 $comment === '' ? null : $comment
             );
-            $this->flash->success('Thanks — your rating has been submitted.');
+            $this->flash->success($this->translator->trans('rating.submitted'));
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());
         }

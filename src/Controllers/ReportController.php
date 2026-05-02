@@ -8,6 +8,7 @@ use App\Models\Auction;
 use App\Models\Report;
 use App\Services\AuthService;
 use App\Services\FlashService;
+use App\Services\Translator;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -25,14 +26,15 @@ final class ReportController
         private readonly PDO $db,
         private readonly Twig $view,
         private readonly AuthService $auth,
-        private readonly FlashService $flash
+        private readonly FlashService $flash,
+        private readonly Translator $translator
     ) {
     }
 
     public function showListing(Request $request, Response $response, array $args): Response
     {
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Log in to report a listing.');
+            $this->flash->error($this->translator->trans('auth.required.report'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -52,7 +54,7 @@ final class ReportController
     public function submitListing(Request $request, Response $response, array $args): Response
     {
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Log in to report a listing.');
+            $this->flash->error($this->translator->trans('auth.required.report'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -60,7 +62,7 @@ final class ReportController
         $body   = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/report/listing/' . $itemId)->withStatus(302);
         }
 
@@ -74,13 +76,13 @@ final class ReportController
 
         $errors = [];
         if (!isset(Report::LISTING_REASONS[$reason])) {
-            $errors['reason'] = 'Pick a reason from the list.';
+            $errors['reason'] = $this->translator->trans('report.error.bad_reason');
         }
         if (mb_strlen($details) < 10) {
-            $errors['details'] = 'Please give at least a sentence describing what went wrong.';
+            $errors['details'] = $this->translator->trans('report.error.too_short');
         }
         if (mb_strlen($details) > 2000) {
-            $errors['details'] = 'Keep it under 2000 characters.';
+            $errors['details'] = $this->translator->trans('report.error.too_long');
         }
         if ($errors !== []) {
             return $this->view->render($response, 'pages/report_listing.twig', [
@@ -98,7 +100,7 @@ final class ReportController
             $details
         );
 
-        $this->flash->success('Report submitted. An admin will take a look shortly.');
+        $this->flash->success($this->translator->trans('report.success'));
         return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
     }
 
@@ -125,7 +127,7 @@ final class ReportController
 
         $body = (array)$request->getParsedBody();
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/admin?tab=reports')->withStatus(302);
         }
 

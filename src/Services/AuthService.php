@@ -67,7 +67,7 @@ final class AuthService
     public function verifyPassword(string $email, string $password): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT user_id, password_hash, phone, phone_verified_at
+            'SELECT user_id, password_hash, phone, phone_verified_at, locale
                FROM users WHERE email = :email'
         );
         $stmt->execute(['email' => $email]);
@@ -177,7 +177,7 @@ final class AuthService
     {
         $stmt = $this->db->prepare(
             'SELECT user_id, username, email, phone, phone_verified_at,
-                    first_name, last_name, role
+                    first_name, last_name, role, locale
                FROM users WHERE user_id = :id'
         );
         $stmt->execute(['id' => $userId]);
@@ -193,7 +193,7 @@ final class AuthService
     public function findByEmail(string $email): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT user_id, username, email, phone, phone_verified_at
+            'SELECT user_id, username, email, phone, phone_verified_at, locale
                FROM users WHERE email = :email'
         );
         $stmt->execute(['email' => $email]);

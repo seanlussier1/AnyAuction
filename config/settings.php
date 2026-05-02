@@ -44,5 +44,6 @@ return [
     'paths' => [
         'root' => $rootPath,
         'templates' => $rootPath . '/templates',
+        'locales' => $rootPath . '/locales',
     ],
 ];

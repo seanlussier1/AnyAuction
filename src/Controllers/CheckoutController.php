@@ -11,6 +11,7 @@ use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\NotificationService;
 use App\Services\StripeService;
+use App\Services\Translator;
 use App\Services\TwilioService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -26,7 +27,8 @@ final class CheckoutController
         private readonly AuthService $auth,
         private readonly FlashService $flash,
         private readonly StripeService $stripe,
-        private readonly TwilioService $twilio
+        private readonly TwilioService $twilio,
+        private readonly Translator $translator
     ) {
     }
 
@@ -38,7 +40,7 @@ final class CheckoutController
     public function start(Request $request, Response $response, array $args): Response
     {
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Log in to complete a purchase.');
+            $this->flash->error($this->translator->trans('auth.required.checkout'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -46,7 +48,7 @@ final class CheckoutController
 
         $body = (array)$request->getParsedBody();
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
         }
 
@@ -63,7 +65,7 @@ final class CheckoutController
         $isSold  = $auction['buy_now_price'] !== null
                 && (float)$auction['current_price'] >= (float)$auction['buy_now_price'];
         if (!$isSold) {
-            $this->flash->error('This auction has not been bought out yet.');
+            $this->flash->error($this->translator->trans('checkout.error.not_sold'));
             return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
         }
         $check = $this->db->prepare(
@@ -75,13 +77,13 @@ final class CheckoutController
             'amt' => $auction['current_price'],
         ]);
         if (!$check->fetchColumn()) {
-            $this->flash->error('Only the winning bidder can check out this item.');
+            $this->flash->error($this->translator->trans('checkout.error.not_winner'));
             return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
         }
 
         $orderModel = new Order($this->db);
         if ($orderModel->isItemPaid($itemId)) {
-            $this->flash->success('This item has already been paid for.');
+            $this->flash->success($this->translator->trans('checkout.already_paid'));
             return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
         }
 
@@ -93,7 +95,9 @@ final class CheckoutController
                 imageUrl: $auction['primary_image'] ?? null
             );
         } catch (Throwable $e) {
-            $this->flash->error('Could not start checkout: ' . $e->getMessage());
+            $this->flash->error($this->translator->trans('checkout.error.session_expired', [
+                'error' => $e->getMessage(),
+            ]));
             return $response->withHeader('Location', '/auction/' . $itemId)->withStatus(302);
         }
 
@@ -146,7 +150,7 @@ final class CheckoutController
             $orderModel->markPaid((int)$order['order_id']);
             $order['status']  = 'paid';
             $order['paid_at'] = date('Y-m-d H:i:s');
-            $this->flash->success('Payment confirmed — thanks for your purchase!');
+            $this->flash->success($this->translator->trans('checkout.confirmed_msg'));
 
             // Tell the seller their payout is on its way. Look up the
             // seller from the auction this order paid for.
@@ -156,7 +160,7 @@ final class CheckoutController
             $sellerStmt->execute(['id' => (int)$order['item_id']]);
             $sellerId = (int)$sellerStmt->fetchColumn();
             if ($sellerId > 0) {
-                (new NotificationService($this->db, $this->twilio))->notifyOrderPaid(
+                (new NotificationService($this->db, $this->twilio, $this->translator))->notifyOrderPaid(
                     $sellerId,
                     (int)$order['item_id'],
                     (float)$order['amount']

@@ -1,5 +1,5 @@
 {% extends 'layout.twig' %}
-{% block title %}Verify your phone — AnyAuction{% endblock %}
+{% block title %}{{ 'auth.enroll.page_title'|t }} — AnyAuction{% endblock %}
 
 {% block content %}
 <div class="container py-5" style="max-width: 28rem;">
@@ -9,9 +9,13 @@
     </a>
 
     {% if step == 'code' %}
-        <h1 class="h3 mb-1">Verify your phone</h1>
+        <h1 class="h3 mb-1">{{ 'auth.enroll.title.code'|t }}</h1>
         <p class="text-muted-aa mb-4">
-            Enter the 6-digit code we just texted to{% if phone_mask %} {{ phone_mask }}{% else %} your phone{% endif %}.
+            {% if phone_mask %}
+                {{ 'auth.enroll.intro.code'|t({ phone_mask: phone_mask }) }}
+            {% else %}
+                {{ 'auth.enroll.intro.code_no_mask'|t }}
+            {% endif %}
         </p>
 
         <form method="post" action="/enroll-phone" class="d-flex flex-column gap-3">
@@ -19,7 +23,7 @@
             <input type="hidden" name="step" value="code">
 
             <div>
-                <label class="form-label small text-muted-aa">6-digit code</label>
+                <label class="form-label small text-muted-aa">{{ 'auth.enroll.label.code'|t }}</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
                     <input type="text" name="code" class="form-control"
@@ -30,17 +34,17 @@
             </div>
 
             <button type="submit" class="btn btn-primary py-2">
-                Verify phone <i class="bi bi-arrow-right ms-1"></i>
+                {{ 'auth.enroll.verify_phone'|t }} <i class="bi bi-arrow-right ms-1"></i>
             </button>
         </form>
 
         <p class="small text-muted-aa mt-3 mb-0">
-            <a href="/enroll-phone?step=phone" class="text-decoration-none">Use a different number</a>
+            <a href="/enroll-phone?step=phone" class="text-decoration-none">{{ 'auth.enroll.use_other'|t }}</a>
         </p>
     {% else %}
-        <h1 class="h3 mb-1">Add your phone</h1>
+        <h1 class="h3 mb-1">{{ 'auth.enroll.title.phone'|t }}</h1>
         <p class="text-muted-aa mb-4">
-            We use SMS to keep your account secure. Enter a US or Canada number and we'll text you a code.
+            {{ 'auth.enroll.intro.phone'|t }}
         </p>
 
         <form method="post" action="/enroll-phone" class="d-flex flex-column gap-3">
@@ -48,7 +52,7 @@
             <input type="hidden" name="step" value="phone">
 
             <div>
-                <label class="form-label small text-muted-aa">Mobile phone</label>
+                <label class="form-label small text-muted-aa">{{ 'auth.enroll.label.phone'|t }}</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                     <input type="tel" name="phone" class="form-control"
@@ -60,11 +64,11 @@
                            placeholder="5551234567" required autofocus
                            value="{{ old.phone|default('') }}">
                 </div>
-                <div class="form-text">US or Canada only — digits only. Standard message rates apply.</div>
+                <div class="form-text">{{ 'auth.enroll.help.phone'|t }}</div>
             </div>
 
             <button type="submit" class="btn btn-primary py-2">
-                Send code <i class="bi bi-arrow-right ms-1"></i>
+                {{ 'auth.enroll.send_code'|t }} <i class="bi bi-arrow-right ms-1"></i>
             </button>
         </form>
     {% endif %}

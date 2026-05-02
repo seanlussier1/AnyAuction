@@ -1,8 +1,8 @@
 {% extends 'layout.twig' %}
 {% block title %}
     {% if active_category %}{{ active_category.name }}
-    {% elseif query %}Results for "{{ query }}"
-    {% else %}Browse auctions
+    {% elseif query %}{{ 'browse.results_for'|t({ query: query }) }}
+    {% else %}{{ 'browse.title'|t }}
     {% endif %}
     — AnyAuction
 {% endblock %}
@@ -14,11 +14,17 @@
         <div>
             <h1 class="h3 mb-0">
                 {% if active_category %}{{ active_category.name }}
-                {% elseif query %}Results for &ldquo;{{ query }}&rdquo;
-                {% else %}Browse Auctions
+                {% elseif query %}{{ 'browse.results_for_quoted'|t({ query: query })|raw }}
+                {% else %}{{ 'browse.title'|t }}
                 {% endif %}
             </h1>
-            <div class="small text-muted-aa">{{ result_count }} auction{{ result_count == 1 ? '' : 's' }} found</div>
+            <div class="small text-muted-aa">
+                {% if result_count == 1 %}
+                    {{ 'browse.count_one'|t({ count: result_count }) }}
+                {% else %}
+                    {{ 'browse.count_many'|t({ count: result_count }) }}
+                {% endif %}
+            </div>
         </div>
 
         <form method="get" action="/browse" class="d-flex gap-2 align-items-center">
@@ -27,20 +33,20 @@
 
             <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
                     data-bs-toggle="collapse" data-bs-target="#advancedFilters">
-                <i class="bi bi-sliders"></i> Filters
+                <i class="bi bi-sliders"></i> {{ 'browse.filters'|t }}
             </button>
             <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
-                <option value="ending"     {{ active_sort == 'ending'     ? 'selected' : '' }}>Ending Soon</option>
-                <option value="price-low"  {{ active_sort == 'price-low'  ? 'selected' : '' }}>Price: Low to High</option>
-                <option value="price-high" {{ active_sort == 'price-high' ? 'selected' : '' }}>Price: High to Low</option>
-                <option value="newest"     {{ active_sort == 'newest'     ? 'selected' : '' }}>Newest</option>
+                <option value="ending"     {{ active_sort == 'ending'     ? 'selected' : '' }}>{{ 'browse.sort.ending'|t }}</option>
+                <option value="price-low"  {{ active_sort == 'price-low'  ? 'selected' : '' }}>{{ 'browse.sort.price_low'|t }}</option>
+                <option value="price-high" {{ active_sort == 'price-high' ? 'selected' : '' }}>{{ 'browse.sort.price_high'|t }}</option>
+                <option value="newest"     {{ active_sort == 'newest'     ? 'selected' : '' }}>{{ 'browse.sort.newest'|t }}</option>
             </select>
         </form>
     </div>
 
     <div class="d-flex flex-wrap gap-2 mb-4">
         <a href="/browse{% if query %}?q={{ query }}{% endif %}"
-           class="btn btn-sm rounded-pill {{ not active_category ? 'btn-primary' : 'btn-outline-secondary' }}">All</a>
+           class="btn btn-sm rounded-pill {{ not active_category ? 'btn-primary' : 'btn-outline-secondary' }}">{{ 'browse.all'|t }}</a>
         {% for cat in categories %}
             <a href="/browse?category={{ cat.category_id }}{% if query %}&q={{ query }}{% endif %}"
                class="btn btn-sm rounded-pill {{ active_category and active_category.category_id == cat.category_id ? 'btn-primary' : 'btn-outline-secondary' }}">
@@ -52,23 +58,29 @@
     <div class="collapse mb-4" id="advancedFilters">
         <div class="p-4 bg-surface-aa rounded-lg-aa border">
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <h5 class="mb-0">Filters</h5>
-                <span class="small text-muted-aa"><i class="bi bi-info-circle me-1"></i>Backend wiring comes in a later deliverable</span>
+                <h5 class="mb-0">{{ 'browse.filters'|t }}</h5>
+                <span class="small text-muted-aa"><i class="bi bi-info-circle me-1"></i>{{ 'browse.filters.coming_soon'|t }}</span>
             </div>
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label small text-muted-aa">Min price</label>
+                    <label class="form-label small text-muted-aa">{{ 'browse.filter.min_price'|t }}</label>
                     <input type="number" class="form-control" placeholder="0">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small text-muted-aa">Max price</label>
-                    <input type="number" class="form-control" placeholder="Any">
+                    <label class="form-label small text-muted-aa">{{ 'browse.filter.max_price'|t }}</label>
+                    <input type="number" class="form-control" placeholder="{{ 'browse.filter.any'|t }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small text-muted-aa d-block">Condition</label>
+                    <label class="form-label small text-muted-aa d-block">{{ 'auction.condition'|t }}</label>
                     <div class="d-flex flex-wrap gap-1">
-                        {% for c in ['New', 'Like New', 'Excellent', 'Good', 'Fair'] %}
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill">{{ c }}</button>
+                        {% for c in [
+                            { v: 'New',       k: 'condition.new' },
+                            { v: 'Like New',  k: 'condition.like_new' },
+                            { v: 'Excellent', k: 'condition.excellent' },
+                            { v: 'Good',      k: 'condition.good' },
+                            { v: 'Fair',      k: 'condition.fair' }
+                        ] %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill">{{ c.k|t }}</button>
                         {% endfor %}
                     </div>
                 </div>
@@ -79,8 +91,8 @@
     {% if auctions|length == 0 %}
         <div class="text-center py-5 text-muted-aa">
             <i class="bi bi-search fs-1 opacity-25 d-block mb-3"></i>
-            <p>No auctions found matching your criteria.</p>
-            <a href="/browse" class="btn btn-primary mt-2">Clear filters</a>
+            <p>{{ 'browse.empty'|t }}</p>
+            <a href="/browse" class="btn btn-primary mt-2">{{ 'browse.clear'|t }}</a>
         </div>
     {% else %}
         <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4"

@@ -24,52 +24,52 @@
                         <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle text-capitalize">{{ user.role }}</span>
                     </div>
                     <div class="small text-white-50">@{{ user.username }} · {{ user.email }}</div>
-                    <div class="small text-white-50 opacity-75">Member since {{ user.created_at|date('F Y') }}</div>
+                    <div class="small text-white-50 opacity-75">{{ 'profile.member_since'|t({ date: user.created_at|date('F Y') }) }}</div>
                 </div>
             </div>
             <a href="/sell" class="btn btn-outline-light btn-sm align-self-start">
-                <i class="bi bi-plus-lg me-1"></i>Create new listing
+                <i class="bi bi-plus-lg me-1"></i>{{ 'nav.create_listing'|t }}
             </a>
         </div>
 
         <div class="row row-cols-3 row-cols-md-6 g-3 mt-3">
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.active_listings }}</div>
-                <div class="small text-white-50">Active listings</div>
+                <div class="small text-white-50">{{ 'profile.stat.active_listings'|t }}</div>
             </div>
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.total_listings }}</div>
-                <div class="small text-white-50">Total listings</div>
+                <div class="small text-white-50">{{ 'profile.stat.total_listings'|t }}</div>
             </div>
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.active_bids }}</div>
-                <div class="small text-white-50">Active bids</div>
+                <div class="small text-white-50">{{ 'profile.stat.active_bids'|t }}</div>
             </div>
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.watchlist }}</div>
-                <div class="small text-white-50">Watching</div>
+                <div class="small text-white-50">{{ 'profile.stat.watching'|t }}</div>
             </div>
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.rating }}</div>
-                <div class="small text-white-50"><i class="bi bi-star-fill"></i> Rating</div>
+                <div class="small text-white-50"><i class="bi bi-star-fill"></i> {{ 'profile.stat.rating'|t }}</div>
             </div>
             <div class="col">
                 <div class="fs-5 text-amber">{{ stats.reviews }}</div>
-                <div class="small text-white-50">Reviews</div>
+                <div class="small text-white-50">{{ 'profile.stat.reviews'|t }}</div>
             </div>
         </div>
     </div>
 
     <ul class="nav nav-tabs mb-4 flex-nowrap overflow-auto" role="tablist">
-        <li class="nav-item"><button class="nav-link text-nowrap active" data-bs-toggle="tab" data-bs-target="#tab-listings"      type="button"><i class="bi bi-shop me-1"></i>My listings</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-sold"          type="button"><i class="bi bi-check-circle me-1"></i>Sold {% if sold|length > 0 %}<span class="badge bg-success-subtle text-success-emphasis ms-1">{{ sold|length }}</span>{% endif %}</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-bids"          type="button"><i class="bi bi-cart me-1"></i>My bids</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-won"           type="button"><i class="bi bi-trophy me-1"></i>Won {% if won|length > 0 %}<span class="badge bg-success-subtle text-success-emphasis ms-1">{{ won|length }}</span>{% endif %}</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-watchlist"     type="button"><i class="bi bi-heart me-1"></i>Watchlist</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-orders"        type="button"><i class="bi bi-box me-1"></i>Orders</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-reviews"       type="button"><i class="bi bi-chat-dots me-1"></i>Reviews</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-notifications" type="button" id="aa-notifs-tab"><i class="bi bi-bell me-1"></i>Notifications {% if unread_notifs > 0 %}<span class="badge bg-warning text-dark ms-1">{{ unread_notifs }}</span>{% endif %}</button></li>
-        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-settings"      type="button"><i class="bi bi-gear me-1"></i>Settings</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap active" data-bs-toggle="tab" data-bs-target="#tab-listings"      type="button"><i class="bi bi-shop me-1"></i>{{ 'profile.tab.listings'|t }}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-sold"          type="button"><i class="bi bi-check-circle me-1"></i>{{ 'profile.tab.sold'|t }} {% if sold|length > 0 %}<span class="badge bg-success-subtle text-success-emphasis ms-1">{{ sold|length }}</span>{% endif %}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-bids"          type="button"><i class="bi bi-cart me-1"></i>{{ 'profile.tab.bids'|t }}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-won"           type="button"><i class="bi bi-trophy me-1"></i>{{ 'profile.tab.won'|t }} {% if won|length > 0 %}<span class="badge bg-success-subtle text-success-emphasis ms-1">{{ won|length }}</span>{% endif %}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-watchlist"     type="button"><i class="bi bi-heart me-1"></i>{{ 'profile.tab.watchlist'|t }}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-orders"        type="button"><i class="bi bi-box me-1"></i>{{ 'profile.tab.orders'|t }}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-reviews"       type="button"><i class="bi bi-chat-dots me-1"></i>{{ 'profile.tab.reviews'|t }}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-notifications" type="button" id="aa-notifs-tab"><i class="bi bi-bell me-1"></i>{{ 'profile.tab.notifications'|t }} {% if unread_notifs > 0 %}<span class="badge bg-warning text-dark ms-1">{{ unread_notifs }}</span>{% endif %}</button></li>
+        <li class="nav-item"><button class="nav-link text-nowrap"        data-bs-toggle="tab" data-bs-target="#tab-settings"      type="button"><i class="bi bi-gear me-1"></i>{{ 'profile.tab.settings'|t }}</button></li>
     </ul>
 
     <div class="tab-content">
@@ -77,16 +77,16 @@
         <div class="tab-pane fade show active" id="tab-listings" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div>
-                    <h2 class="h5 mb-0">My listings</h2>
-                    <div class="small text-muted-aa">{{ listings|length }} total</div>
+                    <h2 class="h5 mb-0">{{ 'profile.listings.heading'|t }}</h2>
+                    <div class="small text-muted-aa">{{ 'profile.listings.count'|t({ count: listings|length }) }}</div>
                 </div>
-                <a href="/sell" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New listing</a>
+                <a href="/sell" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>{{ 'profile.listings.new'|t }}</a>
             </div>
             {% if listings|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-shop fs-1 opacity-25 d-block mb-2"></i>
-                    <p>You haven't created any listings yet.</p>
-                    <a href="/sell" class="text-decoration-none">Create your first listing</a>
+                    <p>{{ 'profile.listings.empty'|t }}</p>
+                    <a href="/sell" class="text-decoration-none">{{ 'profile.listings.first'|t }}</a>
                 </div>
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
@@ -100,14 +100,14 @@
         <div class="tab-pane fade" id="tab-sold" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div>
-                    <h2 class="h5 mb-0">Sold items</h2>
-                    <div class="small text-muted-aa">{{ sold|length }} sold via Buy Now</div>
+                    <h2 class="h5 mb-0">{{ 'profile.sold.heading'|t }}</h2>
+                    <div class="small text-muted-aa">{{ 'profile.sold.count'|t({ count: sold|length }) }}</div>
                 </div>
             </div>
             {% if sold|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-check-circle fs-1 opacity-25 d-block mb-2"></i>
-                    <p>No sold items yet. Sales will appear here once a buyer hits your buyout.</p>
+                    <p>{{ 'profile.sold.empty'|t }}</p>
                 </div>
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 align-items-start">
@@ -117,7 +117,7 @@
                             {% set so = sold_orders_by_item[auction.item_id] ?? null %}
                             {% if so and so.status in ['pending','paid'] and (so.buyer_phone or so.buyer_email) %}
                                 <div class="mt-2 p-2 rounded-lg-aa bg-surface-aa small">
-                                    <div class="text-muted-aa mb-1"><i class="bi bi-person-lines-fill me-1"></i>Contact your buyer</div>
+                                    <div class="text-muted-aa mb-1"><i class="bi bi-person-lines-fill me-1"></i>{{ 'profile.sold.contact_buyer'|t }}</div>
                                     <div class="d-flex flex-column gap-1">
                                         <div><strong>{{ so.buyer_first_name }} {{ so.buyer_last_name }}</strong></div>
                                         {% if so.buyer_phone %}<a href="sms:{{ so.buyer_phone }}" class="text-decoration-none"><i class="bi bi-telephone me-1"></i>{{ so.buyer_phone }}</a>{% endif %}
@@ -128,15 +128,15 @@
                             {% if so and so.status == 'paid' %}
                                 <div class="mt-2">
                                     {% if rated_orders[so.order_id] %}
-                                        <span class="badge bg-success-subtle text-success-emphasis w-100 d-block py-1"><i class="bi bi-check-circle me-1"></i>Rated buyer</span>
+                                        <span class="badge bg-success-subtle text-success-emphasis w-100 d-block py-1"><i class="bi bi-check-circle me-1"></i>{{ 'profile.sold.rated_buyer'|t }}</span>
                                     {% else %}
                                         <button class="btn btn-sm btn-outline-warning w-100" type="button"
                                                 data-bs-toggle="collapse" data-bs-target="#rate-seller-{{ so.order_id }}"
                                                 aria-expanded="false">
-                                            <i class="bi bi-star me-1"></i>Rate buyer ({{ so.buyer_first_name }})
+                                            <i class="bi bi-star me-1"></i>{{ 'profile.sold.rate_buyer'|t({ name: so.buyer_first_name }) }}
                                         </button>
                                         <div class="collapse" id="rate-seller-{{ so.order_id }}">
-                                            {% include 'partials/rate_form.twig' with { order_id: so.order_id, label: 'Rate buyer', csrf: csrf } only %}
+                                            {% include 'partials/rate_form.twig' with { order_id: so.order_id, label: 'rating.label.rate_buyer'|t, csrf: csrf } only %}
                                         </div>
                                     {% endif %}
                                 </div>
@@ -151,8 +151,8 @@
             {% if bids|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-cart fs-1 opacity-25 d-block mb-2"></i>
-                    <p>You haven't placed any bids yet.</p>
-                    <a href="/browse" class="text-decoration-none">Browse auctions</a>
+                    <p>{{ 'profile.bids.empty'|t }}</p>
+                    <a href="/browse" class="text-decoration-none">{{ 'profile.bids.browse'|t }}</a>
                 </div>
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
@@ -166,15 +166,15 @@
         <div class="tab-pane fade" id="tab-won" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div>
-                    <h2 class="h5 mb-0">Auctions won</h2>
-                    <div class="small text-muted-aa">{{ won|length }} won at buyout</div>
+                    <h2 class="h5 mb-0">{{ 'profile.won.heading'|t }}</h2>
+                    <div class="small text-muted-aa">{{ 'profile.won.count'|t({ count: won|length }) }}</div>
                 </div>
             </div>
             {% if won|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-trophy fs-1 opacity-25 d-block mb-2"></i>
-                    <p>You haven't won any auctions yet. Hit Buy Now on a listing to lock it in.</p>
-                    <a href="/browse" class="text-decoration-none">Browse auctions</a>
+                    <p>{{ 'profile.won.empty'|t }}</p>
+                    <a href="/browse" class="text-decoration-none">{{ 'profile.bids.browse'|t }}</a>
                 </div>
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 align-items-start">
@@ -185,15 +185,15 @@
                             {% if wo and wo.status == 'paid' %}
                                 <div class="mt-2">
                                     {% if rated_orders[wo.order_id] %}
-                                        <span class="badge bg-success-subtle text-success-emphasis w-100 d-block py-1"><i class="bi bi-check-circle me-1"></i>Rated seller</span>
+                                        <span class="badge bg-success-subtle text-success-emphasis w-100 d-block py-1"><i class="bi bi-check-circle me-1"></i>{{ 'profile.won.rated_seller'|t }}</span>
                                     {% else %}
                                         <button class="btn btn-sm btn-outline-warning w-100" type="button"
                                                 data-bs-toggle="collapse" data-bs-target="#rate-won-{{ wo.order_id }}"
                                                 aria-expanded="false">
-                                            <i class="bi bi-star me-1"></i>Rate seller
+                                            <i class="bi bi-star me-1"></i>{{ 'profile.won.rate_seller'|t }}
                                         </button>
                                         <div class="collapse" id="rate-won-{{ wo.order_id }}">
-                                            {% include 'partials/rate_form.twig' with { order_id: wo.order_id, label: 'Rate seller', csrf: csrf } only %}
+                                            {% include 'partials/rate_form.twig' with { order_id: wo.order_id, label: 'rating.label.rate_seller'|t, csrf: csrf } only %}
                                         </div>
                                     {% endif %}
                                 </div>
@@ -207,16 +207,22 @@
         <div class="tab-pane fade" id="tab-watchlist" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div>
-                    <h2 class="h5 mb-0">Watchlist</h2>
-                    <div class="small text-muted-aa">{{ watchlist|length }} item{{ watchlist|length == 1 ? '' : 's' }}</div>
+                    <h2 class="h5 mb-0">{{ 'profile.watchlist.heading'|t }}</h2>
+                    <div class="small text-muted-aa">
+                        {% if watchlist|length == 1 %}
+                            {{ 'profile.watchlist.count_one'|t({ count: watchlist|length }) }}
+                        {% else %}
+                            {{ 'profile.watchlist.count_many'|t({ count: watchlist|length }) }}
+                        {% endif %}
+                    </div>
                 </div>
-                <a href="/watchlist" class="btn btn-outline-secondary btn-sm">Open full watchlist</a>
+                <a href="/watchlist" class="btn btn-outline-secondary btn-sm">{{ 'profile.watchlist.open_full'|t }}</a>
             </div>
             {% if watchlist|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-heart fs-1 opacity-25 d-block mb-2"></i>
-                    <p>Nothing watched yet. Click the heart on any listing to save it here.</p>
-                    <a href="/browse" class="text-decoration-none">Browse auctions</a>
+                    <p>{{ 'profile.watchlist.empty'|t }}</p>
+                    <a href="/browse" class="text-decoration-none">{{ 'profile.bids.browse'|t }}</a>
                 </div>
             {% else %}
                 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
@@ -230,14 +236,14 @@
         <div class="tab-pane fade" id="tab-orders" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div>
-                    <h2 class="h5 mb-0">Orders</h2>
-                    <div class="small text-muted-aa">{{ orders|length }} total</div>
+                    <h2 class="h5 mb-0">{{ 'profile.orders.heading'|t }}</h2>
+                    <div class="small text-muted-aa">{{ 'profile.orders.count'|t({ count: orders|length }) }}</div>
                 </div>
             </div>
             {% if orders|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-box fs-1 opacity-25 d-block mb-2"></i>
-                    <p>No orders yet. Win an auction and complete checkout to see it here.</p>
+                    <p>{{ 'profile.orders.empty'|t }}</p>
                 </div>
             {% else %}
                 <div class="d-flex flex-column gap-2">
@@ -254,17 +260,17 @@
                                 <div class="flex-grow-1 min-w-0">
                                     <a href="/auction/{{ o.item_id }}" class="text-decoration-none text-dark">
                                         <div class="fw-medium text-truncate">{{ o.title }}</div>
-                                        <div class="small text-muted-aa">Order #{{ o.order_id }} · {{ o.created_at|date('M j, Y') }}</div>
+                                        <div class="small text-muted-aa">{{ 'profile.orders.order_num'|t({ id: o.order_id }) }} · {{ o.created_at|date('M j, Y') }}</div>
                                     </a>
                                 </div>
                                 <div class="text-end flex-shrink-0">
                                     <div class="fw-medium">${{ o.amount|number_format(2) }}</div>
                                     {% if o.status == 'paid' %}
-                                        <span class="badge bg-success-subtle text-success-emphasis">Paid</span>
+                                        <span class="badge bg-success-subtle text-success-emphasis">{{ 'profile.orders.status.paid'|t }}</span>
                                     {% elseif o.status == 'pending' %}
-                                        <span class="badge bg-warning-subtle text-warning-emphasis">Pending</span>
+                                        <span class="badge bg-warning-subtle text-warning-emphasis">{{ 'profile.orders.status.pending'|t }}</span>
                                     {% elseif o.status == 'cancelled' %}
-                                        <span class="badge bg-secondary-subtle text-secondary-emphasis">Cancelled</span>
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ 'profile.orders.status.cancelled'|t }}</span>
                                     {% else %}
                                         <span class="badge bg-danger-subtle text-danger-emphasis">{{ o.status|capitalize }}</span>
                                     {% endif %}
@@ -272,12 +278,12 @@
                                 {% if o.status == 'paid' %}
                                     <div class="flex-shrink-0">
                                         {% if rated_orders[o.order_id] %}
-                                            <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle me-1"></i>Rated</span>
+                                            <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle me-1"></i>{{ 'profile.orders.rated'|t }}</span>
                                         {% else %}
                                             <button class="btn btn-sm btn-outline-warning" type="button"
                                                     data-bs-toggle="collapse" data-bs-target="#rate-buyer-{{ o.order_id }}"
                                                     aria-expanded="false">
-                                                <i class="bi bi-star me-1"></i>Rate seller
+                                                <i class="bi bi-star me-1"></i>{{ 'profile.orders.rate_seller'|t }}
                                             </button>
                                         {% endif %}
                                     </div>
@@ -285,7 +291,7 @@
                             </div>
                             {% if o.status in ['pending','paid'] and (o.seller_phone or o.seller_email) %}
                                 <div class="mt-2 p-2 rounded-lg-aa bg-surface-aa small">
-                                    <div class="text-muted-aa mb-1"><i class="bi bi-person-lines-fill me-1"></i>Contact your seller</div>
+                                    <div class="text-muted-aa mb-1"><i class="bi bi-person-lines-fill me-1"></i>{{ 'profile.orders.contact_seller'|t }}</div>
                                     <div class="d-flex flex-wrap gap-3">
                                         <span><strong>{{ o.seller_first_name }} {{ o.seller_last_name }}</strong> <a href="/users/{{ o.seller_id }}" class="text-muted-aa text-decoration-none">@{{ o.seller_username }}</a></span>
                                         {% if o.seller_phone %}<a href="sms:{{ o.seller_phone }}" class="text-decoration-none"><i class="bi bi-telephone me-1"></i>{{ o.seller_phone }}</a>{% endif %}
@@ -295,7 +301,7 @@
                             {% endif %}
                             {% if o.status == 'paid' and not rated_orders[o.order_id] %}
                                 <div class="collapse" id="rate-buyer-{{ o.order_id }}">
-                                    {% include 'partials/rate_form.twig' with { order_id: o.order_id, label: 'Rate seller', csrf: csrf } only %}
+                                    {% include 'partials/rate_form.twig' with { order_id: o.order_id, label: 'rating.label.rate_seller'|t, csrf: csrf } only %}
                                 </div>
                             {% endif %}
                         </div>
@@ -311,14 +317,14 @@
         <div class="tab-pane fade" id="tab-notifications" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div>
-                    <h2 class="h5 mb-0">Notifications</h2>
-                    <div class="small text-muted-aa">{{ notifications|length }} recent · {{ unread_notifs }} unread</div>
+                    <h2 class="h5 mb-0">{{ 'profile.notifs.heading'|t }}</h2>
+                    <div class="small text-muted-aa">{{ 'profile.notifs.recent'|t({ recent: notifications|length, unread: unread_notifs }) }}</div>
                 </div>
             </div>
             {% if notifications|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-bell fs-1 opacity-25 d-block mb-2"></i>
-                    <p>You're all caught up. Bids, outbids, sales, and payments will land here as they happen.</p>
+                    <p>{{ 'profile.notifs.empty'|t }}</p>
                 </div>
             {% else %}
                 <div class="d-flex flex-column gap-2">
@@ -342,7 +348,7 @@
                             <div class="flex-grow-1 min-w-0">
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
                                     <div class="fw-medium">{{ n.title }}</div>
-                                    {% if n.is_read == 0 %}<span class="badge bg-warning text-dark">New</span>{% endif %}
+                                    {% if n.is_read == 0 %}<span class="badge bg-warning text-dark">{{ 'profile.notifs.new'|t }}</span>{% endif %}
                                 </div>
                                 {% if n.body %}<div class="small text-muted-aa">{{ n.body }}</div>{% endif %}
                                 <div class="small text-muted-aa opacity-75">{{ n.created_at|date('M j, Y g:i a') }}</div>
@@ -355,50 +361,50 @@
 
         <div class="tab-pane fade" id="tab-settings" role="tabpanel">
             <div style="max-width: 32rem;">
-                <h3 class="h6">Profile information</h3>
+                <h3 class="h6">{{ 'profile.settings.profile'|t }}</h3>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label small text-muted-aa">First name</label>
+                        <label class="form-label small text-muted-aa">{{ 'auth.register.first_name'|t }}</label>
                         <input class="form-control" value="{{ user.first_name }}" disabled>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-muted-aa">Last name</label>
+                        <label class="form-label small text-muted-aa">{{ 'auth.register.last_name'|t }}</label>
                         <input class="form-control" value="{{ user.last_name }}" disabled>
                     </div>
                     <div class="col-12">
-                        <label class="form-label small text-muted-aa">Email</label>
+                        <label class="form-label small text-muted-aa">{{ 'auth.login.email'|t }}</label>
                         <input type="email" class="form-control" value="{{ user.email }}" disabled>
                     </div>
                 </div>
 
-                <h3 class="h6">Payout settings</h3>
+                <h3 class="h6">{{ 'profile.settings.payout'|t }}</h3>
                 <div class="p-3 mb-4 rounded-lg-aa border border-success-subtle bg-success-subtle small">
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <i class="bi bi-credit-card text-success"></i>
-                        <span>Stripe Connected</span>
-                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">Active</span>
+                        <span>{{ 'profile.settings.payout.connected'|t }}</span>
+                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">{{ 'profile.settings.payout.active'|t }}</span>
                     </div>
-                    <div class="text-muted-aa">Payouts sent to your linked bank account every Friday. (Coming with Stripe integration.)</div>
+                    <div class="text-muted-aa">{{ 'profile.settings.payout.note'|t }}</div>
                 </div>
 
-                <h3 class="h6">Notification preferences</h3>
+                <h3 class="h6">{{ 'profile.settings.notifs'|t }}</h3>
                 <div class="d-flex flex-column gap-2 mb-4">
-                    {% for pref in [
-                        'Email notifications for new bids on my listings',
-                        'SMS notifications via Twilio (phone)',
-                        'Outbid alerts for items I am bidding on',
-                        'Weekly seller performance digest',
-                        'Order update notifications'
+                    {% for pref_key in [
+                        'profile.settings.pref.email_bids',
+                        'profile.settings.pref.sms_twilio',
+                        'profile.settings.pref.outbid',
+                        'profile.settings.pref.weekly_digest',
+                        'profile.settings.pref.order_updates'
                     ] %}
                         <label class="p-2 border rounded-lg-aa d-flex align-items-center gap-2 small">
                             <input type="checkbox" class="form-check-input" checked disabled>
-                            {{ pref }}
+                            {{ pref_key|t }}
                         </label>
                     {% endfor %}
                 </div>
 
-                <button class="btn btn-primary" disabled>Save settings</button>
-                <p class="small text-muted-aa mt-2">Settings save is wired in a later phase.</p>
+                <button class="btn btn-primary" disabled>{{ 'profile.settings.save'|t }}</button>
+                <p class="small text-muted-aa mt-2">{{ 'profile.settings.save_note'|t }}</p>
             </div>
         </div>
 

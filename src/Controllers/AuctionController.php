@@ -11,6 +11,7 @@ use App\Models\Rating;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\NotificationService;
+use App\Services\Translator;
 use App\Services\TwilioService;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -25,7 +26,8 @@ final class AuctionController
         private readonly Twig $view,
         private readonly AuthService $auth,
         private readonly FlashService $flash,
-        private readonly TwilioService $twilio
+        private readonly TwilioService $twilio,
+        private readonly Translator $translator
     ) {
     }
 
@@ -78,14 +80,14 @@ final class AuctionController
         $id = (int)($args['id'] ?? 0);
 
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('You need to log in to buy now.');
+            $this->flash->error($this->translator->trans('auth.required.buy'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
         $body = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/auction/' . $id)->withStatus(302);
         }
 
@@ -94,7 +96,7 @@ final class AuctionController
             return $this->notFound($response);
         }
         if ($auction['buy_now_price'] === null) {
-            $this->flash->error('This auction does not offer Buy Now.');
+            $this->flash->error($this->translator->trans('auction.buyout.no_offer'));
             return $response->withHeader('Location', '/auction/' . $id)->withStatus(302);
         }
 
@@ -102,7 +104,7 @@ final class AuctionController
             $userId = (int)$_SESSION['user_id'];
             $result = (new Bid($this->db))->place($id, $userId, (float)$auction['buy_now_price']);
 
-            $notifs = new NotificationService($this->db, $this->twilio);
+            $notifs = new NotificationService($this->db, $this->twilio, $this->translator);
             $notifs->notifyWatchers($id, 'buyout', [
                 'amount'   => (float)$auction['buy_now_price'],
                 'actor_id' => $userId,
@@ -121,7 +123,7 @@ final class AuctionController
                 $notifs->notifyItemSold($sellerId, $id, (float)$result['amount']);
             }
 
-            $this->flash->success('Item secured at the buyout price — proceed to checkout.');
+            $this->flash->success($this->translator->trans('auction.buyout.success'));
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());
         }
@@ -134,20 +136,20 @@ final class AuctionController
         $id = (int)($args['id'] ?? 0);
 
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('You need to log in before placing a bid.');
+            $this->flash->error($this->translator->trans('auth.required.bid'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
         $body = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/auction/' . $id)->withStatus(302);
         }
 
         $amount = filter_var($body['amount'] ?? '', FILTER_VALIDATE_FLOAT);
         if ($amount === false) {
-            $this->flash->error('Enter a valid dollar amount.');
+            $this->flash->error($this->translator->trans('auction.bid.invalid_amount'));
             return $response->withHeader('Location', '/auction/' . $id)->withStatus(302);
         }
 
@@ -156,7 +158,7 @@ final class AuctionController
             $result = (new Bid($this->db))->place($id, $userId, (float)$amount);
             $finalAmount = (float)$result['amount'];
 
-            $notifs = new NotificationService($this->db, $this->twilio);
+            $notifs = new NotificationService($this->db, $this->twilio, $this->translator);
             $notifs->notifyWatchers($id, 'bid', [
                 'amount'   => $finalAmount,
                 'actor_id' => $userId,
@@ -191,13 +193,14 @@ final class AuctionController
                     'new_end_time'      => $result['new_end_time'],
                 ]);
                 $extensionMinutes = (int)round($result['extension_seconds'] / 60);
-                $this->flash->success(sprintf(
-                    'Bid of $%s placed — last-minute bid, auction extended by %d minutes.',
-                    number_format($finalAmount, 2),
-                    $extensionMinutes
-                ));
+                $this->flash->success($this->translator->trans('auction.bid.placed_snipe', [
+                    'amount'  => number_format($finalAmount, 2),
+                    'minutes' => $extensionMinutes,
+                ]));
             } else {
-                $this->flash->success(sprintf('Bid of $%s placed successfully.', number_format($finalAmount, 2)));
+                $this->flash->success($this->translator->trans('auction.bid.placed', [
+                    'amount' => number_format($finalAmount, 2),
+                ]));
             }
         } catch (RuntimeException $e) {
             $this->flash->error($e->getMessage());

@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Services\AuthService;
 use App\Services\CloudinaryService;
 use App\Services\FlashService;
+use App\Services\Translator;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -22,14 +23,15 @@ final class SellController
         private readonly Twig $view,
         private readonly AuthService $auth,
         private readonly FlashService $flash,
-        private readonly CloudinaryService $cloudinary
+        private readonly CloudinaryService $cloudinary,
+        private readonly Translator $translator
     ) {
     }
 
     public function showForm(Request $request, Response $response): Response
     {
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Please log in to list an item.');
+            $this->flash->error($this->translator->trans('auth.required.sell'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -44,7 +46,7 @@ final class SellController
     public function create(Request $request, Response $response): Response
     {
         if (!$this->auth->isLoggedIn()) {
-            $this->flash->error('Please log in to list an item.');
+            $this->flash->error($this->translator->trans('auth.required.sell'));
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
 
@@ -52,7 +54,7 @@ final class SellController
         $files = $request->getUploadedFiles();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/sell')->withStatus(302);
         }
 
@@ -72,11 +74,11 @@ final class SellController
             }
         }
         if (!$hasImage) {
-            $errors['images'] = 'Please add at least one photo.';
+            $errors['images'] = $this->translator->trans('sell.error.no_image');
         }
 
         if (!empty($errors)) {
-            $this->flash->error('Please correct the errors below.');
+            $this->flash->error($this->translator->trans('sell.error.fix'));
             $categories = (new Category($this->db))->all();
             return $this->view->render($response, 'pages/sell.twig', [
                 'categories' => $categories,
@@ -95,11 +97,13 @@ final class SellController
             // Handle image uploads
             $upload = $this->handleImageUploads($auctionId, $files);
 
-            $successMsg = 'Auction created successfully!';
             if ($upload['uploaded'] > 0) {
-                $successMsg .= " {$upload['uploaded']} image(s) uploaded.";
+                $this->flash->success($this->translator->trans('sell.success.with_uploads', [
+                    'count' => $upload['uploaded'],
+                ]));
+            } else {
+                $this->flash->success($this->translator->trans('sell.success'));
             }
-            $this->flash->success($successMsg);
 
             if ($upload['skipped'] > 0) {
                 $tally = array_count_values($upload['reasons']);
@@ -109,7 +113,10 @@ final class SellController
                 }
                 $this->flash->add(
                     'warning',
-                    $upload['skipped'] . ' image(s) skipped: ' . implode(', ', $parts) . '.'
+                    $this->translator->trans('sell.skipped', [
+                        'count'   => $upload['skipped'],
+                        'reasons' => implode(', ', $parts),
+                    ])
                 );
             }
 

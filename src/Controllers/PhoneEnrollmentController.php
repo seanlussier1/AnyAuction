@@ -8,6 +8,7 @@ use App\Services\AuthCodeService;
 use App\Services\AuthService;
 use App\Services\FlashService;
 use App\Services\PhoneNormalizer;
+use App\Services\Translator;
 use App\Services\TwilioService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -31,7 +32,8 @@ final class PhoneEnrollmentController
         private readonly AuthService $auth,
         private readonly FlashService $flash,
         private readonly AuthCodeService $codes,
-        private readonly TwilioService $twilio
+        private readonly TwilioService $twilio,
+        private readonly Translator $translator
     ) {
     }
 
@@ -66,7 +68,7 @@ final class PhoneEnrollmentController
         $body = (array)$request->getParsedBody();
 
         if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
-            $this->flash->error('Your session expired. Please try again.');
+            $this->flash->error($this->translator->trans('csrf.expired'));
             return $response->withHeader('Location', '/enroll-phone')->withStatus(302);
         }
 
@@ -93,7 +95,7 @@ final class PhoneEnrollmentController
         $phoneE164 = PhoneNormalizer::normalize($phoneRaw);
 
         if ($phoneE164 === null) {
-            $this->flash->error('Please enter a valid US or Canada phone number.');
+            $this->flash->error($this->translator->trans('auth.register.bad_phone'));
             $_SESSION['_enroll_step'] = 'phone';
             return $this->view->render($response, 'auth/enroll_phone.twig', [
                 'step'       => 'phone',
@@ -103,7 +105,7 @@ final class PhoneEnrollmentController
         }
 
         if ($this->auth->isPhoneLinkedToOtherUser($phoneE164, $userId)) {
-            $this->flash->error('This phone is already linked to another account.');
+            $this->flash->error($this->translator->trans('auth.enroll.duplicate'));
             $_SESSION['_enroll_step'] = 'phone';
             return $this->view->render($response, 'auth/enroll_phone.twig', [
                 'step'       => 'phone',
@@ -114,16 +116,22 @@ final class PhoneEnrollmentController
 
         $this->auth->updatePhone($userId, $phoneE164);
 
+        // Need locale AFTER the phone update so we hit the same row.
+        $user      = $this->auth->findById($userId);
+        $userLocale = (string)($user['locale'] ?? 'en');
+
         $code = $this->codes->issue($userId, 'phone_verify');
         $this->twilio->sendSms(
             $phoneE164,
-            "Verify your AnyAuction phone with code {$code}. Expires in 10 minutes."
+            $this->translator->trans('sms.code.phone_verify', ['code' => $code], $userLocale)
         );
         // Dev-mode crutch — see AuthController for context.
         error_log("[dev-2fa] phone_verify code for user_id={$userId}: {$code}");
 
         $_SESSION['_enroll_step'] = 'code';
-        $this->flash->success('We sent a code to ' . $this->maskPhone($phoneE164) . '.');
+        $this->flash->success($this->translator->trans('auth.enroll.code_sent', [
+            'phone' => $this->maskPhone($phoneE164),
+        ]));
         return $response->withHeader('Location', '/enroll-phone?step=code')->withStatus(302);
     }
 
@@ -135,7 +143,7 @@ final class PhoneEnrollmentController
         $code = trim((string)($body['code'] ?? ''));
 
         if (!$this->codes->verify($userId, 'phone_verify', $code)) {
-            $this->flash->error('That code is invalid or expired.');
+            $this->flash->error($this->translator->trans('auth.2fa.bad_code'));
             $user = $this->auth->findById($userId);
             return $this->view->render($response, 'auth/enroll_phone.twig', [
                 'step'       => 'code',
@@ -149,7 +157,7 @@ final class PhoneEnrollmentController
         unset($_SESSION['pending_enrollment_user_id'], $_SESSION['_enroll_step']);
         $this->auth->completeLogin($userId);
 
-        $this->flash->success('Phone verified. Welcome!');
+        $this->flash->success($this->translator->trans('auth.enroll.success'));
         return $response->withHeader('Location', '/')->withStatus(302);
     }
 

@@ -1,43 +1,43 @@
 {% extends 'layout.twig' %}
-{% block title %}Report listing — AnyAuction{% endblock %}
+{% block title %}{{ 'report.title'|t }} — AnyAuction{% endblock %}
 
 {% block content %}
 <div class="container py-4" style="max-width: 40rem;">
     <nav aria-label="breadcrumb" class="small text-muted-aa">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/auction/{{ auction.item_id }}" class="text-decoration-none text-muted-aa">{{ auction.title }}</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Report</li>
+            <li class="breadcrumb-item active" aria-current="page">{{ 'report.breadcrumb'|t }}</li>
         </ol>
     </nav>
 
-    <h1 class="h3 mb-3">Report this listing</h1>
-    <p class="text-muted-aa">Tell us what's wrong with <strong>{{ auction.title }}</strong>. Reports go to the admin team for review — we follow up on every submission.</p>
+    <h1 class="h3 mb-3">{{ 'report.title'|t }}</h1>
+    <p class="text-muted-aa">{{ 'report.intro_html'|t({ title: auction.title })|raw }}</p>
 
     <form action="/report/listing/{{ auction.item_id }}" method="post" class="d-flex flex-column gap-3">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
 
         <div>
-            <label class="form-label">Reason</label>
+            <label class="form-label">{{ 'report.reason'|t }}</label>
             <select name="reason" class="form-select" required>
-                <option value="" {% if not old.reason %}selected{% endif %} disabled>Pick a reason…</option>
+                <option value="" {% if not old.reason %}selected{% endif %} disabled>{{ 'report.reason.placeholder'|t }}</option>
                 {% for value, label in reasons %}
-                    <option value="{{ value }}" {% if old.reason == value %}selected{% endif %}>{{ label }}</option>
+                    <option value="{{ value }}" {% if old.reason == value %}selected{% endif %}>{{ ('report.reason.' ~ value)|t }}</option>
                 {% endfor %}
             </select>
             {% if errors.reason %}<div class="text-danger small mt-1">{{ errors.reason }}</div>{% endif %}
         </div>
 
         <div>
-            <label class="form-label">What happened?</label>
+            <label class="form-label">{{ 'report.details'|t }}</label>
             <textarea name="details" class="form-control" rows="6" minlength="10" maxlength="2000"
-                      placeholder="Be specific — what did you see, when, and what's wrong with it?" required>{{ old.details|default('') }}</textarea>
-            <div class="form-text">10-2000 characters. The admin team reviews every report.</div>
+                      placeholder="{{ 'report.details.placeholder'|t }}" required>{{ old.details|default('') }}</textarea>
+            <div class="form-text">{{ 'report.details.help'|t }}</div>
             {% if errors.details %}<div class="text-danger small mt-1">{{ errors.details }}</div>{% endif %}
         </div>
 
         <div class="d-flex gap-2">
-            <a href="/auction/{{ auction.item_id }}" class="btn btn-outline-secondary">Cancel</a>
-            <button type="submit" class="btn btn-danger">Submit report</button>
+            <a href="/auction/{{ auction.item_id }}" class="btn btn-outline-secondary">{{ 'btn.cancel'|t }}</a>
+            <button type="submit" class="btn btn-danger">{{ 'report.submit'|t }}</button>
         </div>
     </form>
 </div>

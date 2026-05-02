@@ -1,5 +1,5 @@
 {% extends 'layout.twig' %}
-{% block title %}Create an account — AnyAuction{% endblock %}
+{% block title %}{{ 'auth.register.title'|t }} — AnyAuction{% endblock %}
 
 {% block content %}
 <div class="container py-5" style="max-width: 30rem;">
@@ -8,31 +8,31 @@
         <span class="fs-5">AnyAuction</span>
     </a>
 
-    <h1 class="h3 mb-1">Create your account</h1>
-    <p class="text-muted-aa mb-4">Start bidding and selling in minutes.</p>
+    <h1 class="h3 mb-1">{{ 'auth.register.title'|t }}</h1>
+    <p class="text-muted-aa mb-4">{{ 'auth.register.subtitle'|t }}</p>
 
     <form method="post" action="/register" class="d-flex flex-column gap-3">
         <input type="hidden" name="_csrf" value="{{ csrf_token }}">
         <div class="row g-3">
             <div class="col">
-                <label class="form-label small text-muted-aa">First name</label>
+                <label class="form-label small text-muted-aa">{{ 'auth.register.first_name'|t }}</label>
                 <input name="first_name" class="form-control" required value="{{ old.firstName|default('') }}">
             </div>
             <div class="col">
-                <label class="form-label small text-muted-aa">Last name</label>
+                <label class="form-label small text-muted-aa">{{ 'auth.register.last_name'|t }}</label>
                 <input name="last_name" class="form-control" required value="{{ old.lastName|default('') }}">
             </div>
         </div>
         <div>
-            <label class="form-label small text-muted-aa">Email</label>
+            <label class="form-label small text-muted-aa">{{ 'auth.register.email'|t }}</label>
             <input type="email" name="email" class="form-control" required value="{{ old.email|default('') }}">
         </div>
         <div>
-            <label class="form-label small text-muted-aa">Username</label>
+            <label class="form-label small text-muted-aa">{{ 'auth.register.username'|t }}</label>
             <input name="username" class="form-control" required minlength="3" maxlength="50" value="{{ old.username|default('') }}">
         </div>
         <div>
-            <label class="form-label small text-muted-aa">Phone</label>
+            <label class="form-label small text-muted-aa">{{ 'auth.register.phone'|t }}</label>
             <input type="tel" name="phone" class="form-control" required
                    placeholder="5551234567"
                    autocomplete="tel"
@@ -41,23 +41,23 @@
                    maxlength="11"
                    data-aa-digits-only
                    value="{{ old.phone|default('') }}">
-            <div class="form-text">US or Canada — digits only. We'll text you a verification code.</div>
+            <div class="form-text">{{ 'auth.register.phone_help'|t }}</div>
         </div>
         <div>
-            <label class="form-label small text-muted-aa">Password</label>
+            <label class="form-label small text-muted-aa">{{ 'auth.register.password'|t }}</label>
             <input type="password" name="password" class="form-control" required minlength="8">
-            <div class="form-text">At least 8 characters.</div>
+            <div class="form-text">{{ 'auth.register.password_help'|t }}</div>
         </div>
         <div>
-            <label class="form-label small text-muted-aa">Confirm password</label>
+            <label class="form-label small text-muted-aa">{{ 'auth.register.confirm'|t }}</label>
             <input type="password" name="password_confirm" class="form-control" required minlength="8">
         </div>
 
-        <button type="submit" class="btn btn-primary py-2">Create account <i class="bi bi-arrow-right ms-1"></i></button>
+        <button type="submit" class="btn btn-primary py-2">{{ 'auth.register.submit'|t }} <i class="bi bi-arrow-right ms-1"></i></button>
     </form>
 
     <p class="text-center small text-muted-aa mt-4">
-        Already have an account? <a href="/login" class="text-decoration-none">Sign in</a>
+        {{ 'auth.register.have_account'|t }} <a href="/login" class="text-decoration-none">{{ 'auth.register.login_link'|t }}</a>
     </p>
 </div>
 
