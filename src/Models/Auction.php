@@ -236,6 +236,34 @@ final class Auction
     }
 
     /**
+     * Active listings whose item_id is greater than $sinceId — used by the
+     * live-update poller to prepend brand-new listings into the grid
+     * without a full reload. Optionally filtered by category to match the
+     * page the user is viewing.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function sinceForFeed(int $sinceId, ?int $categoryId = null, int $limit = 24): array
+    {
+        $where  = "a.status = 'active' AND a.end_time > NOW() AND a.item_id > :since AND " . self::NOT_SOLD;
+        $params = ['since' => $sinceId];
+        if ($categoryId !== null) {
+            $where .= ' AND a.category_id = :cat';
+            $params['cat'] = $categoryId;
+        }
+
+        $stmt = $this->db->prepare($this->listingSelect()
+            . ' WHERE ' . $where
+            . ' ORDER BY a.item_id DESC LIMIT :lim');
+        foreach ($params as $k => $v) {
+            $stmt->bindValue(':' . $k, $v, PDO::PARAM_INT);
+        }
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Live-search active auctions by title prefix/contains. LIKE wildcards in
      * the user's query are escaped so a literal % or _ is treated as text.
      *

@@ -39,9 +39,10 @@ final class HeartbeatController
         }
 
         $payload = [
-            'version'           => $this->appVersion(),
-            'listings_changed'  => $this->listingsTimestamp(),
-            'server_time'       => time(),
+            'version'                 => $this->appVersion(),
+            'listings_changed'        => $this->listingsTimestamp(),
+            'latest_listing_id'       => $this->latestListingId(),
+            'server_time'             => time(),
             'unread_notifications'    => 0,
             'latest_notification_id'  => 0,
         ];
@@ -79,6 +80,15 @@ final class HeartbeatController
             }
         }
         return 'dev';
+    }
+
+    private function latestListingId(): int
+    {
+        $stmt = $this->db->query(
+            "SELECT COALESCE(MAX(item_id), 0) FROM auction_items
+             WHERE status = 'active' AND end_time > NOW()"
+        );
+        return (int)$stmt->fetchColumn();
     }
 
     private function listingsTimestamp(): int

@@ -83,8 +83,8 @@ final class Order
                    s.username   AS seller_username,
                    s.first_name AS seller_first_name,
                    s.last_name  AS seller_last_name,
-                   CASE WHEN o.status = 'paid' THEN s.phone ELSE NULL END AS seller_phone,
-                   CASE WHEN o.status = 'paid' THEN s.email ELSE NULL END AS seller_email,
+                   CASE WHEN o.status IN ('pending','paid') THEN s.phone ELSE NULL END AS seller_phone,
+                   CASE WHEN o.status IN ('pending','paid') THEN s.email ELSE NULL END AS seller_email,
                    (SELECT image_url FROM item_images
                       WHERE item_id = a.item_id
                       ORDER BY is_primary DESC, display_order ASC
@@ -114,8 +114,8 @@ final class Order
                    u.username   AS buyer_username,
                    u.first_name AS buyer_first_name,
                    u.last_name  AS buyer_last_name,
-                   CASE WHEN o.status = 'paid' THEN u.phone ELSE NULL END AS buyer_phone,
-                   CASE WHEN o.status = 'paid' THEN u.email ELSE NULL END AS buyer_email,
+                   CASE WHEN o.status IN ('pending','paid') THEN u.phone ELSE NULL END AS buyer_phone,
+                   CASE WHEN o.status IN ('pending','paid') THEN u.email ELSE NULL END AS buyer_email,
                    (SELECT image_url FROM item_images
                       WHERE item_id = a.item_id
                       ORDER BY is_primary DESC, display_order ASC
