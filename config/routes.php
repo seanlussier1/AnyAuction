@@ -54,7 +54,11 @@ return function (App $app): void {
     $app->post('/report/{id}/resolve',     [ReportController::class, 'resolve']);
     $app->post('/report/{id}/dismiss',     [ReportController::class, 'dismiss']);
 
-    $app->get('/admin',            [AdminController::class, 'index']);
+    $app->get('/admin', [AdminController::class, 'index']);
+    $app->post('/admin/listings/{id}/remove', [AdminController::class, 'removeListing']);
+    $app->post('/admin/users/{id}/warn',      [AdminController::class, 'warnUser']);
+    $app->post('/admin/users/{id}/ban',       [AdminController::class, 'banUser']);
+    $app->post('/admin/users/{id}/unban',     [AdminController::class, 'unbanUser']);
 
     $app->get('/register',  [AuthController::class, 'showRegister']);
     $app->post('/register', [AuthController::class, 'register']);

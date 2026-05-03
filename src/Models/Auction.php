@@ -156,14 +156,21 @@ final class Auction
 
     /**
      * Admin listings table view — every auction with minimal fields + seller name.
+     * Includes a derived `display_status` so the UI can render closed/expired
+     * auctions as "inactive" without relying on the row's actual status.
      *
      * @return array<int, array<string, mixed>>
      */
     public function adminAll(): array
     {
-        $stmt = $this->db->query('
+        $stmt = $this->db->query("
             SELECT a.item_id, a.title, a.current_price, a.status, a.category_id,
                    a.created_at, a.end_time,
+                   CASE
+                       WHEN a.status = 'active' AND a.end_time <= NOW() THEN 'inactive'
+                       WHEN a.status = 'closed' THEN 'inactive'
+                       ELSE a.status
+                   END AS display_status,
                    (SELECT COUNT(*) FROM bids WHERE item_id = a.item_id) AS total_bids,
                    u.username AS seller_username,
                    c.name     AS category_name,
@@ -174,8 +181,42 @@ final class Auction
             FROM auction_items a
             JOIN users      u ON u.user_id     = a.seller_id
             JOIN categories c ON c.category_id = a.category_id
-            ORDER BY a.created_at DESC');
+            ORDER BY a.created_at DESC
+        ");
+
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Flip every active auction whose end_time has passed to status='closed'.
+     * Returns the number of rows updated. Idempotent — safe to call repeatedly.
+     */
+    public function closeExpired(): int
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE auction_items
+                SET status = 'closed'
+              WHERE status = 'active' AND end_time <= NOW()"
+        );
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Admin moderation: cancel a listing so it disappears from the marketplace.
+     * Returns true if a row was actually flipped (false if already cancelled).
+     */
+    public function adminRemove(int $itemId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE auction_items
+                SET status = 'cancelled'
+              WHERE item_id = :id AND status <> 'cancelled'"
+        );
+        $stmt->execute(['id' => $itemId]);
+
+        return $stmt->rowCount() > 0;
     }
 
     /**

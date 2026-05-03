@@ -9,13 +9,6 @@
         <h1 class="h3 mb-0">Admin Dashboard</h1>
     </div>
 
-    {% if not is_real_admin %}
-        <div class="alert alert-warning small">
-            <i class="bi bi-exclamation-triangle me-1"></i>
-            <strong>Dev preview:</strong> you're seeing this as a non-admin user. RBAC + 2FA gating is part of a later deliverable — right now any signed-in user can reach <code>/admin</code>.
-        </div>
-    {% endif %}
-
     <ul class="nav nav-tabs mb-4 flex-nowrap overflow-auto" role="tablist">
         <li class="nav-item">
             <button class="nav-link {{ active_tab == 'overview' ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#adm-overview" type="button">
@@ -130,6 +123,7 @@
                            value="{{ user_search }}">
                 </div>
             </form>
+
             <div class="border rounded-xl overflow-hidden">
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
@@ -138,10 +132,12 @@
                                 <th class="px-3">User</th>
                                 <th class="px-3 d-none d-md-table-cell">Role</th>
                                 <th class="px-3 d-none d-md-table-cell">Verified</th>
-                                <th class="px-3 d-none d-lg-table-cell">Joined</th>
+                                <th class="px-3 d-none d-lg-table-cell">Status</th>
+                                <th class="px-3 d-none d-xl-table-cell">Joined</th>
                                 <th class="px-3 text-end">Actions</th>
                             </tr>
                         </thead>
+
                         <tbody>
                             {% for u in users %}
                                 <tr>
@@ -150,20 +146,25 @@
                                             {% if u.profile_picture %}
                                                 <img src="{{ u.profile_picture }}" alt="" class="rounded-circle" width="32" height="32">
                                             {% else %}
-                                                <span class="aa-brand-badge" style="width: 32px; height: 32px;"><i class="bi bi-person"></i></span>
+                                                <span class="aa-brand-badge" style="width: 32px; height: 32px;">
+                                                    <i class="bi bi-person"></i>
+                                                </span>
                                             {% endif %}
+
                                             <div>
                                                 <div>{{ u.username }}</div>
                                                 <div class="small text-muted-aa">{{ u.email }}</div>
                                             </div>
                                         </div>
                                     </td>
+
                                     <td class="px-3 d-none d-md-table-cell">
                                         {% set badge = u.role == 'admin' ? 'primary-subtle text-primary-emphasis' :
                                                        u.role == 'seller' ? 'info-subtle text-info-emphasis' :
                                                                             'secondary-subtle text-secondary-emphasis' %}
                                         <span class="badge bg-{{ badge }} text-capitalize">{{ u.role }}</span>
                                     </td>
+
                                     <td class="px-3 d-none d-md-table-cell">
                                         {% if u.is_verified %}
                                             <i class="bi bi-check-circle-fill text-success"></i>
@@ -171,17 +172,62 @@
                                             <i class="bi bi-x-circle text-muted-aa"></i>
                                         {% endif %}
                                     </td>
-                                    <td class="px-3 d-none d-lg-table-cell small">{{ u.created_at|date('M j, Y') }}</td>
+
+                                    <td class="px-3 d-none d-lg-table-cell">
+                                        {% set userStatus = u.account_status|default('active') %}
+                                        {% set statusBadge = userStatus == 'banned' ? 'danger-subtle text-danger-emphasis' :
+                                                             userStatus == 'warned' ? 'warning-subtle text-warning-emphasis' :
+                                                                                      'success-subtle text-success-emphasis' %}
+
+                                        <span class="badge bg-{{ statusBadge }} text-capitalize">{{ userStatus }}</span>
+
+                                        {% if u.warning_note %}
+                                            <div class="small text-muted-aa mt-1">{{ u.warning_note }}</div>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="px-3 d-none d-xl-table-cell small">
+                                        {{ u.created_at|date('M j, Y') }}
+                                    </td>
+
                                     <td class="px-3 text-end">
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-secondary" disabled title="View profile"><i class="bi bi-eye"></i></button>
-                                            <button class="btn btn-outline-warning" disabled title="Warn user"><i class="bi bi-exclamation-triangle"></i></button>
-                                            <button class="btn btn-outline-danger" disabled title="Ban user"><i class="bi bi-slash-circle"></i></button>
+                                        <div class="d-flex justify-content-end gap-1 flex-wrap">
+                                            <a href="/users/{{ u.user_id }}" class="btn btn-sm btn-outline-secondary" title="View profile">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+
+                                            {% if u.role != 'admin' %}
+                                                <form action="/admin/users/{{ u.user_id }}/warn" method="post" class="m-0">
+                                                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                                    <input type="hidden" name="warning_note" value="Flagged by admin">
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Warn user">
+                                                        <i class="bi bi-exclamation-triangle"></i>
+                                                    </button>
+                                                </form>
+
+                                                {% if userStatus == 'banned' %}
+                                                    <form action="/admin/users/{{ u.user_id }}/unban" method="post" class="m-0">
+                                                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Unban user">
+                                                            <i class="bi bi-check-circle"></i>
+                                                        </button>
+                                                    </form>
+                                                {% else %}
+                                                    <form action="/admin/users/{{ u.user_id }}/ban" method="post" class="m-0" onsubmit="return confirm('Ban this user?');">
+                                                        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Ban user">
+                                                            <i class="bi bi-slash-circle"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
                             {% else %}
-                                <tr><td colspan="5" class="text-center text-muted-aa py-4">No users matched.</td></tr>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted-aa py-4">No users matched.</td>
+                                </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -197,20 +243,39 @@
                             {% if a.primary_image %}
                                 <img src="{{ a.primary_image }}" alt="" class="rounded-lg-aa object-fit-cover" width="56" height="56" style="object-fit: cover;">
                             {% else %}
-                                <div class="bg-surface-aa rounded-lg-aa d-flex align-items-center justify-content-center" style="width:56px; height:56px;"><i class="bi bi-image text-muted-aa"></i></div>
+                                <div class="bg-surface-aa rounded-lg-aa d-flex align-items-center justify-content-center" style="width:56px; height:56px;">
+                                    <i class="bi bi-image text-muted-aa"></i>
+                                </div>
                             {% endif %}
+
                             <div>
                                 <div class="small">{{ a.title }}</div>
                                 <div class="small text-muted-aa">
                                     {{ a.seller_username }} · {{ a.category_name }} · ${{ a.current_price|number_format(2) }} · {{ a.total_bids }} bids
-                                    {% set sb = a.status == 'active' ? 'success-subtle text-success-emphasis' : 'secondary-subtle text-secondary-emphasis' %}
-                                    <span class="badge bg-{{ sb }} ms-1 text-capitalize">{{ a.status }}</span>
+
+                                    {% set shownStatus = a.display_status|default(a.status) %}
+                                    {% set sb = shownStatus == 'active' ? 'success-subtle text-success-emphasis' :
+                                                shownStatus == 'cancelled' ? 'danger-subtle text-danger-emphasis' :
+                                                                             'secondary-subtle text-secondary-emphasis' %}
+
+                                    <span class="badge bg-{{ sb }} ms-1 text-capitalize">{{ shownStatus }}</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="btn-group btn-group-sm">
-                            <a href="/auction/{{ a.item_id }}" class="btn btn-outline-secondary"><i class="bi bi-eye"></i></a>
-                            <button class="btn btn-outline-danger" disabled title="Remove listing"><i class="bi bi-trash"></i></button>
+
+                        <div class="d-flex gap-1">
+                            <a href="/auction/{{ a.item_id }}" class="btn btn-sm btn-outline-secondary" title="View listing">
+                                <i class="bi bi-eye"></i>
+                            </a>
+
+                            {% if a.status != 'cancelled' %}
+                                <form action="/admin/listings/{{ a.item_id }}/remove" method="post" class="m-0" onsubmit="return confirm('Remove this listing?');">
+                                    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove listing">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
                 {% else %}
@@ -232,11 +297,13 @@
                                               r.status == 'resolved' ? 'success-subtle text-success-emphasis' :
                                                                        'secondary-subtle text-secondary-emphasis' %}
                         {% set typeBadge = r.type == 'user' ? 'info-subtle text-info-emphasis' : 'primary-subtle text-primary-emphasis' %}
+
                         <div class="p-3 border rounded-xl {{ r.status == 'pending' ? 'border-warning-subtle bg-warning-subtle bg-opacity-25' : '' }}">
                             <div class="d-flex justify-content-between align-items-start gap-3">
                                 <div class="flex-grow-1 min-w-0">
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                         <span class="badge bg-{{ typeBadge }} text-capitalize">{{ r.type }}</span>
+
                                         {% if r.type == 'listing' and r.item_id %}
                                             <a href="/auction/{{ r.item_id }}" class="text-decoration-none">{{ r.item_title|default('(deleted listing)') }}</a>
                                         {% elseif r.type == 'user' and r.reported_user_id %}
@@ -244,23 +311,31 @@
                                         {% else %}
                                             <span class="text-muted-aa">(removed)</span>
                                         {% endif %}
+
                                         <span class="badge bg-{{ statusBadge }} text-capitalize">{{ r.status }}</span>
                                     </div>
-                                    <div class="small text-muted-aa mt-1"><strong>Reason:</strong> {{ r.reason }}</div>
+
+                                    <div class="small text-muted-aa mt-1">
+                                        <strong>Reason:</strong> {{ r.reason }}
+                                    </div>
+
                                     {% if r.details %}
                                         <div class="small mt-1" style="white-space: pre-wrap;">{{ r.details }}</div>
                                     {% endif %}
+
                                     <div class="small text-muted-aa" style="font-size: 0.7rem;">
                                         Reported by @{{ r.reporter_username }} on {{ r.created_at|date('M j, Y g:i a') }}
                                         {% if r.resolved_at %}· {{ r.status }} {{ r.resolved_at|date('M j, Y') }}{% endif %}
                                     </div>
                                 </div>
+
                                 {% if r.status == 'pending' and is_real_admin %}
                                     <div class="d-flex gap-2 flex-shrink-0">
                                         <form action="/report/{{ r.report_id }}/resolve" method="post" class="m-0">
                                             <input type="hidden" name="_csrf" value="{{ csrf_token }}">
                                             <button type="submit" class="btn btn-sm btn-success">Resolve</button>
                                         </form>
+
                                         <form action="/report/{{ r.report_id }}/dismiss" method="post" class="m-0">
                                             <input type="hidden" name="_csrf" value="{{ csrf_token }}">
                                             <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
