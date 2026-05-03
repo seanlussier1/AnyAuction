@@ -159,10 +159,23 @@ final class Auction
      * Includes a derived `display_status` so the UI can render closed/expired
      * auctions as "inactive" without relying on the row's actual status.
      *
+     * The $statusFilter narrows the rows by lifecycle state:
+     *   - "active":    open auctions whose end_time is still in the future (default)
+     *   - "inactive":  closed listings or active listings whose end_time has passed
+     *   - "cancelled": admin-removed listings
+     *   - "all" (or anything else): no filter
+     *
      * @return array<int, array<string, mixed>>
      */
-    public function adminAll(): array
+    public function adminAll(string $statusFilter = 'active'): array
     {
+        $where = match ($statusFilter) {
+            'active'    => "WHERE a.status = 'active' AND a.end_time > NOW()",
+            'inactive'  => "WHERE a.status = 'closed' OR (a.status = 'active' AND a.end_time <= NOW())",
+            'cancelled' => "WHERE a.status = 'cancelled'",
+            default     => '',
+        };
+
         $stmt = $this->db->query("
             SELECT a.item_id, a.title, a.current_price, a.status, a.category_id,
                    a.created_at, a.end_time,
@@ -181,6 +194,7 @@ final class Auction
             FROM auction_items a
             JOIN users      u ON u.user_id     = a.seller_id
             JOIN categories c ON c.category_id = a.category_id
+            $where
             ORDER BY a.created_at DESC
         ");
 

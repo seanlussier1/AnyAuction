@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Auction;
+use App\Models\Category;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\AuthService;
@@ -38,9 +39,10 @@ final class AdminController
             return $blocked;
         }
 
-        $auctions = new Auction($this->db);
-        $users    = new User($this->db);
-        $reports  = new Report($this->db);
+        $auctions   = new Auction($this->db);
+        $users      = new User($this->db);
+        $reports    = new Report($this->db);
+        $categories = new Category($this->db);
 
         $lastSweep = (int)($_SESSION['_admin_swept_at'] ?? 0);
         if (time() - $lastSweep > self::SWEEP_THROTTLE_SECONDS) {
@@ -48,8 +50,20 @@ final class AdminController
             $_SESSION['_admin_swept_at'] = time();
         }
 
-        $activeTab  = (string)($request->getQueryParams()['tab'] ?? 'overview');
-        $userSearch = trim((string)($request->getQueryParams()['uq'] ?? ''));
+        $query = $request->getQueryParams();
+
+        $activeTab    = (string)($query['tab'] ?? 'overview');
+        $userSearch   = trim((string)($query['uq']      ?? ''));
+
+        $listingStatus = (string)($query['lstatus'] ?? 'active');
+        if (!in_array($listingStatus, ['active', 'inactive', 'cancelled', 'all'], true)) {
+            $listingStatus = 'active';
+        }
+
+        $reportType   = (string)($query['rtype']   ?? '');
+        $reportStatus = (string)($query['rstatus'] ?? '');
+        $reportCatId  = (int)($query['rcat']       ?? 0);
+        $reportSearch = trim((string)($query['rq'] ?? ''));
 
         $stats = [
             'active_auctions' => $auctions->countActive(),
@@ -59,14 +73,25 @@ final class AdminController
         ];
 
         return $this->view->render($response, 'pages/admin.twig', [
-            'is_real_admin'   => true,
-            'stats'           => $stats,
-            'category_counts' => $auctions->countByCategory(),
-            'users'           => $users->adminAll($userSearch ?: null),
-            'listings'        => $auctions->adminAll(),
-            'reports'         => $reports->adminAll(),
-            'active_tab'      => in_array($activeTab, ['overview', 'users', 'listings', 'reports'], true) ? $activeTab : 'overview',
-            'user_search'     => $userSearch,
+            'is_real_admin'    => true,
+            'stats'            => $stats,
+            'category_counts'  => $auctions->countByCategory(),
+            'categories'       => $categories->all(),
+            'users'            => $users->adminAll($userSearch ?: null),
+            'listings'         => $auctions->adminAll($listingStatus),
+            'reports'          => $reports->adminAll(
+                $reportType   ?: null,
+                $reportStatus ?: null,
+                $reportCatId  ?: null,
+                $reportSearch ?: null
+            ),
+            'active_tab'       => in_array($activeTab, ['overview', 'users', 'listings', 'reports'], true) ? $activeTab : 'overview',
+            'user_search'      => $userSearch,
+            'listing_status'   => $listingStatus,
+            'report_type'      => $reportType,
+            'report_status'    => $reportStatus,
+            'report_category'  => $reportCatId,
+            'report_search'    => $reportSearch,
         ]);
     }
 
