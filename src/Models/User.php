@@ -40,7 +40,9 @@ final class User
 
     /**
      * Admin users-table view. Optionally filter by a search string matched
-     * against username or email.
+     * against username or email. Includes phone_verified_at so the admin
+     * UI can show users as verified once they've completed phone enrollment,
+     * not just when the seed `is_verified` flag is set.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -49,7 +51,8 @@ final class User
         if ($search !== null && $search !== '') {
             $stmt = $this->db->prepare(
                 'SELECT user_id, username, email, first_name, last_name,
-                        profile_picture, role, is_verified, account_status, warning_note, banned_at, created_at
+                        profile_picture, role, is_verified, phone_verified_at,
+                        account_status, warning_note, banned_at, created_at
                  FROM users
                  WHERE username LIKE :q OR email LIKE :q
                  ORDER BY created_at DESC'
@@ -58,7 +61,8 @@ final class User
         } else {
             $stmt = $this->db->query(
                 'SELECT user_id, username, email, first_name, last_name,
-                        profile_picture, role, is_verified, account_status, warning_note, banned_at, created_at
+                        profile_picture, role, is_verified, phone_verified_at,
+                        account_status, warning_note, banned_at, created_at
                  FROM users ORDER BY created_at DESC'
             );
         }

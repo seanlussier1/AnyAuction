@@ -166,10 +166,10 @@
                                     </td>
 
                                     <td class="px-3 d-none d-md-table-cell">
-                                        {% if u.is_verified %}
-                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                        {% if u.is_verified or u.phone_verified_at %}
+                                            <i class="bi bi-check-circle-fill text-success" title="Phone verified"></i>
                                         {% else %}
-                                            <i class="bi bi-x-circle text-muted-aa"></i>
+                                            <i class="bi bi-x-circle text-muted-aa" title="Not verified"></i>
                                         {% endif %}
                                     </td>
 
@@ -236,6 +236,17 @@
         </div>
 
         <div class="tab-pane fade {{ active_tab == 'listings' ? 'show active' : '' }}" id="adm-listings" role="tabpanel">
+            <form method="get" action="/admin" class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+                <input type="hidden" name="tab" value="listings">
+                {% set statusOpts = {'active':'Active','inactive':'Inactive','cancelled':'Cancelled','all':'All'} %}
+                {% for value, label in statusOpts %}
+                    <a href="/admin?tab=listings&lstatus={{ value }}"
+                       class="btn btn-sm {{ listing_status == value ? 'btn-primary' : 'btn-outline-secondary' }}">
+                        {{ label }}
+                    </a>
+                {% endfor %}
+            </form>
+
             <div class="d-flex flex-column gap-2">
                 {% for a in listings %}
                     <div class="d-flex align-items-center justify-content-between p-3 border rounded-xl">
@@ -279,16 +290,68 @@
                         </div>
                     </div>
                 {% else %}
-                    <p class="text-center text-muted-aa py-4">No listings yet.</p>
+                    <p class="text-center text-muted-aa py-4">No listings match this filter.</p>
                 {% endfor %}
             </div>
         </div>
 
         <div class="tab-pane fade {{ active_tab == 'reports' ? 'show active' : '' }}" id="adm-reports" role="tabpanel">
+            <form method="get" action="/admin" class="row g-2 mb-3">
+                <input type="hidden" name="tab" value="reports">
+
+                <div class="col-12 col-md-3">
+                    <select name="rtype" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value=""        {{ report_type == ''        ? 'selected' : '' }}>All types</option>
+                        <option value="listing" {{ report_type == 'listing' ? 'selected' : '' }}>Listing</option>
+                        <option value="user"    {{ report_type == 'user'    ? 'selected' : '' }}>User</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <select name="rstatus" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value=""          {{ report_status == ''          ? 'selected' : '' }}>All statuses</option>
+                        <option value="pending"   {{ report_status == 'pending'   ? 'selected' : '' }}>Pending</option>
+                        <option value="resolved"  {{ report_status == 'resolved'  ? 'selected' : '' }}>Resolved</option>
+                        <option value="dismissed" {{ report_status == 'dismissed' ? 'selected' : '' }}>Dismissed</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <select name="rcat" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="0">All categories</option>
+                        {% for c in categories %}
+                            <option value="{{ c.category_id }}"
+                                    {{ report_category == c.category_id ? 'selected' : '' }}>
+                                {{ c.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <div class="input-group input-group-sm">
+                        <input type="search" name="rq" class="form-control"
+                               placeholder="User or listing title…"
+                               value="{{ report_search }}">
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {% if report_type or report_status or report_category or report_search %}
+                    <div class="col-12">
+                        <a href="/admin?tab=reports" class="small text-muted-aa text-decoration-none">
+                            <i class="bi bi-x-circle me-1"></i>Clear filters
+                        </a>
+                    </div>
+                {% endif %}
+            </form>
+
             {% if reports|length == 0 %}
                 <div class="text-center py-5 text-muted-aa">
                     <i class="bi bi-flag fs-1 opacity-25 d-block mb-2"></i>
-                    <p>No reports yet. Listings and users that get flagged will appear here.</p>
+                    <p>No reports match this filter.</p>
                 </div>
             {% else %}
                 <div class="d-flex flex-column gap-2">
