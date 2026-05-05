@@ -154,6 +154,7 @@ return [
     // CSRF / general
     'csrf.expired'               => 'Votre session a expiré. Veuillez réessayer.',
     'auth.required.profile'      => 'Connectez-vous pour voir votre profil.',
+    'auth.login.banned'          => 'Ce compte a été suspendu pour violation des conditions d’utilisation. Contactez le support si vous pensez qu’il s’agit d’une erreur.',
     'auth.required.bid'          => 'Vous devez vous connecter avant d’enchérir.',
     'auth.required.buy'          => 'Vous devez vous connecter pour acheter maintenant.',
     'auth.required.checkout'     => 'Connectez-vous pour finaliser un achat.',

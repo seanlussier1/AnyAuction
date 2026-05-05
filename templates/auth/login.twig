@@ -32,6 +32,11 @@
                         <span class="input-group-text"><i class="bi bi-lock"></i></span>
                         <input type="password" name="password" class="form-control" placeholder="{{ 'auth.login.password_placeholder'|t }}" required>
                     </div>
+                    {% if errors.banned is defined and errors.banned %}
+                        <div class="text-danger small mt-2">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ 'auth.login.banned'|t }}
+                        </div>
+                    {% endif %}
                 </div>
 
                 <label class="d-flex align-items-center gap-2 small text-muted-aa">

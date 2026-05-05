@@ -160,6 +160,7 @@ return [
     // CSRF / general flash
     'csrf.expired'               => 'Your session expired. Please try again.',
     'auth.required.profile'      => 'Log in to view your profile.',
+    'auth.login.banned'          => 'This account has been suspended for a Terms of Service violation. Contact support if you believe this is a mistake.',
     'auth.required.bid'          => 'You need to log in before placing a bid.',
     'auth.required.buy'          => 'You need to log in to buy now.',
     'auth.required.checkout'     => 'Log in to complete a purchase.',

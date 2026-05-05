@@ -96,11 +96,11 @@ final class AuthService
             return null;
         }
 
-        if (($row['account_status'] ?? 'active') === 'banned') {
-            $this->flash->error('This account has been banned.');
-            return null;
-        }
-
+        // Note: ban enforcement intentionally lives at the call sites here
+        // (AuthController::login renders an inline TOS notice; completeLogin()
+        // still refuses to seat a session for a banned row as a safety net).
+        // Returning the row even when banned lets callers present
+        // tailored UX for that case.
         return $row;
     }
 

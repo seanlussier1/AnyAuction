@@ -27,6 +27,13 @@ final class AuthController
         'buyer@anyauction.test',
         'seller@anyauction.test',
         'admin@anyauction.test',
+        'riley@anyauction.test',
+        'sam@anyauction.test',
+        'taylor@anyauction.test',
+        'morgan@anyauction.test',
+        'spammy@anyauction.test',
+        'warned@anyauction.test',
+        'banned@anyauction.test',
     ];
 
     public function __construct(
@@ -137,6 +144,17 @@ final class AuthController
         $user = $this->auth->verifyPassword($email, $password);
         if ($user === null) {
             return $this->view->render($response, 'auth/login.twig', ['old' => ['email' => $email]]);
+        }
+
+        // Banned account: render the form with an inline TOS notice instead
+        // of just bouncing back with a generic flash. Done before any other
+        // post-auth path (demo bypass, enrollment, 2FA) so a banned user
+        // never gets further than the login screen.
+        if (($user['account_status'] ?? 'active') === 'banned') {
+            return $this->view->render($response, 'auth/login.twig', [
+                'old'    => ['email' => $email],
+                'errors' => ['banned' => true],
+            ]);
         }
 
         $userId = (int)$user['user_id'];
