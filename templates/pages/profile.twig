@@ -388,23 +388,33 @@
                 </div>
 
                 <h3 class="h6">{{ 'profile.settings.notifs'|t }}</h3>
-                <div class="d-flex flex-column gap-2 mb-4">
-                    {% for pref_key in [
-                        'profile.settings.pref.email_bids',
-                        'profile.settings.pref.sms_twilio',
-                        'profile.settings.pref.outbid',
-                        'profile.settings.pref.weekly_digest',
-                        'profile.settings.pref.order_updates'
-                    ] %}
+                <form method="POST" action="/profile/settings">
+                    <input type="hidden" name="_csrf" value="{{ csrf }}">
+                    <div class="d-flex flex-column gap-2 mb-4">
                         <label class="p-2 border rounded-lg-aa d-flex align-items-center gap-2 small">
-                            <input type="checkbox" class="form-check-input" checked disabled>
-                            {{ pref_key|t }}
+                            <input type="checkbox" class="form-check-input" name="pref_email_bids" value="1"{% if user.pref_email_bids == 1 %} checked{% endif %}>
+                            {{ 'profile.settings.pref.email_bids'|t }}
                         </label>
-                    {% endfor %}
-                </div>
+                        <label class="p-2 border rounded-lg-aa d-flex align-items-center gap-2 small">
+                            <input type="checkbox" class="form-check-input" name="pref_sms_twilio" value="1"{% if user.sms_opt_out == 0 %} checked{% endif %}>
+                            {{ 'profile.settings.pref.sms_twilio'|t }}
+                        </label>
+                        <label class="p-2 border rounded-lg-aa d-flex align-items-center gap-2 small">
+                            <input type="checkbox" class="form-check-input" name="pref_outbid" value="1"{% if user.pref_outbid == 1 %} checked{% endif %}>
+                            {{ 'profile.settings.pref.outbid'|t }}
+                        </label>
+                        <label class="p-2 border rounded-lg-aa d-flex align-items-center gap-2 small">
+                            <input type="checkbox" class="form-check-input" name="pref_weekly_digest" value="1"{% if user.pref_weekly_digest == 1 %} checked{% endif %}>
+                            {{ 'profile.settings.pref.weekly_digest'|t }}
+                        </label>
+                        <label class="p-2 border rounded-lg-aa d-flex align-items-center gap-2 small">
+                            <input type="checkbox" class="form-check-input" name="pref_order_updates" value="1"{% if user.pref_order_updates == 1 %} checked{% endif %}>
+                            {{ 'profile.settings.pref.order_updates'|t }}
+                        </label>
+                    </div>
 
-                <button class="btn btn-primary" disabled>{{ 'profile.settings.save'|t }}</button>
-                <p class="small text-muted-aa mt-2">{{ 'profile.settings.save_note'|t }}</p>
+                    <button type="submit" class="btn btn-primary">{{ 'profile.settings.save'|t }}</button>
+                </form>
             </div>
         </div>
 

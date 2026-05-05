@@ -46,6 +46,7 @@ return function (App $app): void {
     $app->get('/watchlist',                 [WatchlistController::class, 'index']);
     $app->post('/watchlist/toggle/{id}',    [WatchlistController::class, 'toggle']);
     $app->get('/profile',          [ProfileController::class, 'index']);
+    $app->post('/profile/settings', [ProfileController::class, 'updateSettings']);
     $app->get('/users/{id}',       [PublicProfileController::class, 'show']);
     $app->post('/rate/{orderId}',  [RatingController::class, 'submit']);
 

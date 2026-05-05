@@ -29,8 +29,11 @@ final class AuthService
         }
 
         $stmt = $this->db->prepare(
-            'SELECT user_id, username, email, first_name, last_name, profile_picture,
-                    role, is_verified, account_status, warning_note, locale
+            'SELECT user_id, username, email, phone, phone_verified_at,
+                    first_name, last_name, profile_picture,
+                    role, is_verified, account_status, warning_note,
+                    sms_opt_out, pref_email_bids, pref_outbid,
+                    pref_weekly_digest, pref_order_updates, locale
              FROM users
              WHERE user_id = :id'
         );

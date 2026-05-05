@@ -119,11 +119,70 @@ final class ProfileController
         ]);
     }
 
+    public function updateSettings(Request $request, Response $response): Response
+    {
+        if (!$this->auth->isLoggedIn()) {
+            $this->flash->error($this->translator->trans('auth.required.profile'));
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
+
+        $body = (array)$request->getParsedBody();
+
+        if (!$this->verifyCsrf((string)($body['_csrf'] ?? ''))) {
+            $this->flash->error($this->translator->trans('csrf.expired'));
+            return $response->withHeader('Location', '/profile#tab-settings')->withStatus(302);
+        }
+
+        $user   = $this->auth->currentUser();
+        $userId = (int)$user['user_id'];
+
+        // Unchecked checkboxes are not sent in form data, so absence means 0.
+        // sms_opt_out is opt-OUT semantics: unchecked label "SMS notifications"
+        // means the user wants OUT, which stores as 1.
+        $smsOn = isset($body['pref_sms_twilio']);
+        $smsOptOut       = $smsOn ? 0 : 1;
+        $prefEmailBids   = isset($body['pref_email_bids'])    ? 1 : 0;
+        $prefOutbid      = isset($body['pref_outbid'])        ? 1 : 0;
+        $prefWeekly      = isset($body['pref_weekly_digest']) ? 1 : 0;
+        $prefOrderUpdate = isset($body['pref_order_updates']) ? 1 : 0;
+
+        $stmt = $this->db->prepare(
+            'UPDATE users
+                SET sms_opt_out        = :sms,
+                    pref_email_bids    = :email_bids,
+                    pref_outbid        = :outbid,
+                    pref_weekly_digest = :weekly,
+                    pref_order_updates = :orders
+              WHERE user_id = :uid'
+        );
+        $ok = $stmt->execute([
+            'sms'        => $smsOptOut,
+            'email_bids' => $prefEmailBids,
+            'outbid'     => $prefOutbid,
+            'weekly'     => $prefWeekly,
+            'orders'     => $prefOrderUpdate,
+            'uid'        => $userId,
+        ]);
+
+        if ($ok) {
+            $this->flash->success($this->translator->trans('profile.settings.saved'));
+        } else {
+            $this->flash->error($this->translator->trans('profile.settings.save_failed'));
+        }
+
+        return $response->withHeader('Location', '/profile#tab-settings')->withStatus(302);
+    }
+
     private function ensureCsrfToken(): string
     {
         if (empty($_SESSION['_csrf'])) {
             $_SESSION['_csrf'] = bin2hex(random_bytes(16));
         }
         return $_SESSION['_csrf'];
+    }
+
+    private function verifyCsrf(string $submitted): bool
+    {
+        return isset($_SESSION['_csrf']) && hash_equals($_SESSION['_csrf'], $submitted);
     }
 }

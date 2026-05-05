@@ -34,6 +34,10 @@ CREATE TABLE users (
     banned_at          DATETIME     NULL,
     phone_verified_at  DATETIME     NULL,
     sms_opt_out        TINYINT(1)   NOT NULL DEFAULT 0,
+    pref_email_bids    TINYINT(1)   NOT NULL DEFAULT 1,
+    pref_outbid        TINYINT(1)   NOT NULL DEFAULT 1,
+    pref_weekly_digest TINYINT(1)   NOT NULL DEFAULT 1,
+    pref_order_updates TINYINT(1)   NOT NULL DEFAULT 1,
     locale             VARCHAR(5)   NOT NULL DEFAULT 'en',
     created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
