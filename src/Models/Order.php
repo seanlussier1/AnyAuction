@@ -162,6 +162,14 @@ final class Order
         return $stmt->fetchAll();
     }
 
+    public function totalSales(): float
+    {
+        $stmt = $this->db->query(
+            "SELECT COALESCE(SUM(amount), 0) FROM orders WHERE status = 'paid'"
+        );
+        return (float) $stmt->fetchColumn();
+    }
+
     /**
      * Has this item already been paid for? Used to gate the checkout-start
      * action so the same auction can't be charged twice.

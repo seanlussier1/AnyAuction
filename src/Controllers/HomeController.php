@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Models\Auction;
 use App\Models\Category;
+use App\Models\Order;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -26,6 +27,13 @@ final class HomeController
         $featured    = $auctions->featured(4);
         $endingSoon  = $auctions->endingSoon(4);
 
+        $totalSales  = (new Order($this->db))->totalSales();
+        $salesLabel  = $totalSales >= 1_000_000
+            ? '$' . number_format($totalSales / 1_000_000, 1) . 'M+'
+            : ($totalSales >= 1_000
+                ? '$' . number_format($totalSales / 1_000, 1) . 'K+'
+                : '$' . number_format($totalSales, 0));
+
         return $this->view->render($response, 'pages/home.twig', [
             'categories'   => $categories,
             'featured'     => $featured,
@@ -33,7 +41,7 @@ final class HomeController
             'stats'        => [
                 ['label' => 'Active Auctions', 'value' => '12K+'],
                 ['label' => 'Happy Buyers',    'value' => '45K+'],
-                ['label' => 'Items Sold',      'value' => '$2M+'],
+                ['label' => 'Items Sold',      'value' => $salesLabel],
             ],
         ]);
     }
